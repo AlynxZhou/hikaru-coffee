@@ -5,7 +5,7 @@ path = require("path")
 glob = require("glob")
 module.exports =
 class Router
-  constructor: (logger, renderer, srcDir = "src", docDir = "doc", themeDir) ->
+  constructor: (logger, renderer, srcDir, docDir, themeDir) ->
     @logger = logger
     @renderer = renderer
     @srcDir = srcDir
@@ -37,8 +37,7 @@ class Router
           promiseQueue.push(fse.outputFile(path.join(@docDir,
           s["docPath"]), s["content"]))
         else
-          promiseQueue.push(fse.copy(path.join(@themeDir,
-          @srcDir, s["srcPath"]),
+          promiseQueue.push(fse.copy(path.join(@themeDir, s["srcPath"]),
           path.join(@docDir, s["docPath"])))
       return Promise.all(promiseQueue)
     )
@@ -53,12 +52,10 @@ class Router
     )
 
   routeTemplates: () =>
-    templateFiles = await @matchFiles("*.*",
-    {"cwd": path.join(@themeDir, @srcDir)})
+    templateFiles = await @matchFiles("*.*", {"cwd": @themeDir})
     promiseQueue = []
     for filePath in templateFiles
-      raw = await fse.readFile(path.join(@themeDir,
-      @srcDir, filePath), "utf8")
+      raw = await fse.readFile(path.join(@themeDir, filePath), "utf8")
       data = {
         "srcPath": filePath,
         "text": raw,
@@ -70,15 +67,13 @@ class Router
     return Promise.all(promiseQueue)
 
   routeAssets: () =>
-    assetFiles = await @matchFiles(path.join("**", "*.*"),
-    {"cwd": path.join(@themeDir, @srcDir)})
+    assetFiles = await @matchFiles(path.join("**", "*.*"), {"cwd": @themeDir})
     promiseQueue = []
     for filePath in assetFiles
       # Skip templates.
       if path.dirname(filePath) is '.'
         continue
-      raw = await fse.readFile(path.join(@themeDir,
-      @srcDir, filePath), "utf8")
+      raw = await fse.readFile(path.join(@themeDir, filePath), "utf8")
       data = {
         "srcPath": filePath,
         "text": raw,
