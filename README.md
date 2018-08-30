@@ -12,13 +12,13 @@ A static site generator that generates routes based on directories naturally.
 hikura-site/
     |- src/ # source dir for user files
     |   |- images/
-	|   |- css/
-	|   |- js/
-	|   |- index.md
+    |   |- css/
+    |   |- js/
+    |   |- index.md
     |   |- about/
-	|   |   |- index.md
-	|   |- tags/
-	|   |   |- index.md
+    |   |   |- index.md
+    |   |- tags/
+    |   |   |- index.md
     |- doc/ # source will be render to here
     |   |- images/
     |   |   |- logo.png
@@ -27,9 +27,9 @@ hikura-site/
     |   |- js/
     |   |   |- index.js
     |   |- index.html
-	|   |   |- 2/ # page 2
-	|   |   |   |- index.html
-	|   |   |- 3/ # page 3
+    |   |   |- 2/ # page 2
+    |   |   |   |- index.html
+    |   |   |- 3/ # page 3
     |	|   |   |- index.html
     |   |- about/
     |   |   |- index.html
