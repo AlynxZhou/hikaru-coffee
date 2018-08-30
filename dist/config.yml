@@ -1,0 +1,7 @@
+srcDir: src
+docDir: doc
+themeDir: themes/aria
+
+marked:
+  gutter: true
+  hljs: true

@@ -24,13 +24,18 @@ class Hikaru
     process.on("exit", () =>
       @logger.info("Hikaru is stopping...")
     )
-  init: (workDir = ".",  srcDir, docDir, themeDir) =>
+  init: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
     @logger.info("Hikaru started initialization in `#{workDir}`.")
     return fse.mkdirp(workDir).then(() =>
       @logger.info("Hikaru created `#{workDir}/`.")
       return fse.mkdirp(srcDir or path.join(workDir, "src"))
     ).then(() =>
       @logger.info("Hikaru created `#{srcDir or path.join(workDir, "src")}/`.")
+      return fse.copy(path.join(__dirname, "..", "dist", "config.yml"),
+      configPath or path.join(workDir, "config.yml"))
+    ).then(() =>
+      @logger.info("Hikaru copyed `#{configPath or
+      path.join(workDir, "config.yml")}`.")
       return fse.mkdirp(docDir or path.join(workDir, "doc"))
     ).then(() =>
       @logger.info("Hikaru created `#{docDir or path.join(workDir, "doc")}/`.")
@@ -43,9 +48,9 @@ class Hikaru
 
   clean: (workDir = ".") ->
 
-  generate: (workDir = ".", config, srcDir, docDir, themeDir) =>
+  generate: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
     @workDir = workDir
-    configPath = config or path.join(@workDir, "config.yml")
+    configPath = configPath or path.join(@workDir, "config.yml")
     @config = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     @srcDir = srcDir or path.join(@workDir, @config["srcDir"]) or
     path.join(@workDir, "src")

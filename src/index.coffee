@@ -12,12 +12,13 @@ commander
 
 commander.command("init [dir]").alias("i")
 .option("-d", "--debug", "Print debug messages.")
+.option("-c", "--config <yml>", "Alternative config path.")
 .option("-s", "--srcDir <dir>", "Alternative src dir.")
 .option("-d", "--docDir <dir>", "Alternative doc dir.")
 .option("-t", "--themeDir <dir>", "Alternative theme dir.")
 .action((dir, cmd) ->
-  new Hikaru(cmd["debug"]).init(dir || ".", cmd["srcDir"],
-  cmd["docDir"], cmd["themeDir"])
+  new Hikaru(cmd["debug"]).init(dir || ".", cmd["config"],
+  cmd["srcDir"], cmd["docDir"], cmd["themeDir"])
 )
 
 commander.command("clean [dir]").alias("c")
