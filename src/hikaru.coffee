@@ -24,6 +24,7 @@ class Hikaru
     process.on("exit", () =>
       @logger.info("Hikaru is stopping...")
     )
+
   init: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
     @logger.info("Hikaru started initialization in `#{workDir}`.")
     return fse.mkdirp(workDir).then(() =>
@@ -51,34 +52,36 @@ class Hikaru
   generate: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
     @workDir = workDir
     configPath = configPath or path.join(@workDir, "config.yml")
-    @config = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-    @srcDir = srcDir or path.join(@workDir, @config["srcDir"]) or
+    @siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    @srcDir = srcDir or path.join(@workDir, @siteConfig["srcDir"]) or
     path.join(@workDir, "src")
-    @docDir = docDir or path.join(@workDir, @config["docDir"]) or
+    @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
     path.join(@workDir, "doc")
     @themeDir = (if themeDir?
     then path.join(themeDir, "src")
-    else path.join(@workDir, @config["themeDir"], "src") or
+    else path.join(@workDir, @siteConfig["themeDir"], "src") or
     path.join(@workDir, "themes", "aria", "src"))
+    @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
+    "config.yml")))
     @renderer = new Renderer(@logger)
     @router = new Router(@logger, @renderer, @srcDir, @docDir, @themeDir)
     @registerRenderer()
 
   registerRenderer: () =>
-    templateDir = path.join(@themeDir)
-    njkConfig = Object.assign({"autoescape": false}, @config["nunjucks"])
+    templateDir = @themeDir
+    njkConfig = Object.assign({"autoescape": false}, @siteConfig["nunjucks"])
     njkEnv = nunjucks.configure(templateDir, njkConfig)
     @renderer.register(".njk", ".njk", (data, ctx) =>
       return new Promise((resolve, reject) =>
         try
           resolve(nunjucks.compile(data["text"], njkEnv,
-          path.join(@config["theme"], data["srcPath"])))
+          path.join(@siteConfig["theme"], data["srcPath"])))
         catch err
           reject(err)
       )
     )
 
-    markedConfig = Object.assign({"gfm": true} or @config["marked"])
+    markedConfig = Object.assign({"gfm": true} or @siteConfig["marked"])
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = text.toLowerCase().replace(/[^\w]+/g, '-')
@@ -112,14 +115,18 @@ class Hikaru
       )
     )
 
-    stylConfig = @config.stylus or {}
+    stylConfig = @siteConfig.stylus or {}
     @renderer.register(".styl", ".css", (data, ctx) ->
       return new Promise((resolve, reject) =>
         stylus(data["text"])
         .use(nib())
         .use((style) =>
-          style.define("getConfig", (data) =>
-            return @config[data["val"]]
+          style.define("getSiteConfig", (data) =>
+            return @siteConfig[data["val"]]
+          )
+        ).use((style) =>
+          style.define("getThemeConfig", (data) =>
+            return @themeConfig[data["val"]]
           )
         ).set("filename", data["srcPath"])
         .set("sourcemap", stylConfig["sourcemap"])
