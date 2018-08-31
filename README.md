@@ -6,6 +6,21 @@ A static site generator that generates routes based on directories naturally.
 
 # NOT FINISHED YET, JUST IMPLEMENTED VERY SIMPLE FUNCTIONS.
 
+# List
+
+- [X] Dir based router.
+- [X] Marked Markdown renderer.
+- [X] Stylus CSS renderer.
+- [X] Nunjucks template renderer.
+- [X] Highlight.js code highlight.
+- [X] Async loading, rendering and saving file.
+- [ ] Archives generating.
+- [ ] Categories generating.
+- [ ] Tags generating.
+- [ ] Cheerio-based toc generating.
+- [ ] Cheerio-based path converting (relative to absolute).
+- [ ] Date operations in templates.
+
 # Dir Structure
 
 ```plain
@@ -48,5 +63,4 @@ hikura-site/
     |   |   |   |- images/
     |   |   |   |   |- logo.png
     |   |- README.md
-    |
 ```
