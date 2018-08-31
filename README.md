@@ -43,20 +43,22 @@ hikura-site/
     |   |- js/
     |   |   |- index.js
     |   |- index.html
-    |   |   |- 2/ # page 2
-    |   |   |   |- index.html
-    |   |   |- 3/ # page 3
-    |	|   |   |- index.html
+    |   |- 2.html # page 2 of index
+    |   |- 3.html # page 3 of index
     |   |- about/
     |   |   |- index.html
     |   |- tags/
     |   |   |- index.html
+    |   |   |- tag-1/
+    |   |   |   |- index.html # automatically generated
+    |   |   |   |- 2.html # page 2 of tag-1
     |- themes/
     |   |- aria/
     |   |   |- src/ # this will be render to doc/
     |   |   |   |- layout.njk # templates
     |   |   |   |- index.njk
     |   |   |   |- about.njk
+    |   |   |   |- page.njk # if no layout specific, fallback to this
     |   |   |   |- css/
     |   |   |   |   |- index.styl
     |   |   |   |- js/
