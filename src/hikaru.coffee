@@ -113,7 +113,7 @@ class Hikaru
       "langPrefix": "",
       "highlight": (code, lang) ->
         return highlight(code, {
-          "lang": lang,
+          "lang": lang?.toLowerCase(),
           "hljs":  markedConfig["hljs"] or true,
           "gutter": markedConfig["gutter"] or true
         })

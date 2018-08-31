@@ -1,80 +1,63 @@
 "use strict"
-hljs = require("highlight.js/lib/highlight")
+hljs = require("highlight.js")
 
-detectLang = (str) ->
-  # Load all languages.
-  for lang in [
-    "c", "cpp", "c++", "cxx", "java", "kotlin",
-    "scala", "javascript", "coffeescript", "typescript",
-    "json", "yaml", "yml", "python", "go", "lisp",
-    "elisp", "clisp", "scheme", "haskell", "xml",
-    "html", "markdown", "nunjucks", "css", "stylus",
-    "csharp", "c#"
-  ]
+aliases = null
+
+escapeHTML = (str) ->
+  return str
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#039;")
+
+loadLangAliases = () ->
+  aliases = {"plain": "plain"}
+  for lang in hljs.listLanguages()
+    aliases[lang] = lang
+    lAliases = require("highlight.js/lib/languages/#{lang}")(hljs)["aliases"]
+    if lAliases?
+      for alias in lAliases
+        aliases[alias] = lang
+  return aliases
+
+highlightAuto = (str) ->
+  for alias, lang in aliases
     if not hljs.getLanguage(lang)?
       hljs.registerLanguage(lang,
       require("highlight.js/lib/languages/#{lang}"))
   data = hljs.highlightAuto(str)
   if data["relevance"] > 0 and data["language"]
-    return data["language"]
-  return "plain"
-
-highlightLines = (str, lang) ->
-  matching = str.match(/(\r?\n)/)
-  if matching?
-    lines = str.split(matching[1])
-    values = []
-    result = hljs.highlight(lang, lines.shift())
-    values.push(result["value"])
-    while (lines.length > 0)
-      result = hljs.highlight(lang, lines.shift(), false, result.top)
-      values.push(matching[1])
-      values.push(result["value"])
-    result["value"] = values.join("")
-    return result
-  return hljs.highlight(lang, str)
+    return data
+  return {"value": escapeHTML(str), "language": "plain"}
 
 module.exports =
-highlight = (str, options) ->
-  if not str instanceof String
-    throw new TypeError("str is not a String.")
-  options = options or {}
-  hljs.configure({"classPrefix": ""})
+highlight = (str, options = {}) ->
+  if not aliases?
+    aliases = loadLangAliases()
   if options["hljs"]
     hljs.configure({"classPrefix": "hljs-"})
 
-  if not options["lang"]
-    options["lang"] = detectLang(str)
+  options["lang"] = aliases[options["lang"]]
+  if not options["lang"]?
+    data = highlightAuto(str)
+  else if options["lang"] is "plain"
+    data = {"value": escapeHTML(str), "language": "plain"}
+  else
+    data = hljs.highlight(options["lang"], str)
 
-  data = highlightLines(options["lang"], str)
-
-  lines = data["value"].split("\n")
-  gutters = []
-  codes = []
-  results = []
-
-  for i in [0...lines.length]
-    gutters.push("<span class=\"line\">#{i + 1}</span><br>")
-    codes.push("<span class=\"line\>#{lines[i]}</span><br>")
-
-  results.push("<figure class=\"highlight hljs")
-  if data.language?
-    results.push(" #{data["language"].toLowerCase()}")
-  results.push("\"><table><tr>")
-
+  results = [
+    "<figure class=\"highlight hljs #{data["language"].toLowerCase()}\">",
+    "<table><tr>"
+  ]
   if options["gutter"]
-    results.push("<td class=\"gutter\"><pre>")
+    gutters = ["<td class=\"gutter\"><pre>"]
+    lines = data["value"].split("\n").length
+    for i in [0...lines]
+      gutters.push("<span class=\"line\">#{i + 1}</span>\n")
+    gutters.push("</pre></td>")
     results = results.concat(gutters)
-    results.push("</pre></td>")
-
-  results.push("<td class=\"code\"><pre>")
-  if options["hljs"]
-    results.push("<code class=\"hljs #{options["lang"]}\">")
-  results = results.concat(codes)
-  if options["hljs"]
-    results.push("</code>")
-  results.push("</pre></td>")
-
-  results.push("</tr></table></figure>")
-
+  results.push("<td class=\"code\"><pre><code>")
+  results.push(data["value"])
+  results.push("</code></pre></td></tr></table></figure>")
   return results.join("")
