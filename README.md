@@ -14,9 +14,10 @@ A static site generator that generates routes based on directories naturally.
 - [X] Nunjucks template renderer.
 - [X] Highlight.js code highlight.
 - [X] Async loading, rendering and saving file.
-- [ ] Archives generating.
-- [ ] Categories generating.
-- [ ] Tags generating.
+- [ ] Pagination.
+- [ ] Archives info for templating.
+- [ ] Categories info for templating.
+- [ ] Tags info for templating.
 - [ ] Cheerio-based toc generating.
 - [ ] Cheerio-based path converting (relative to absolute).
 - [ ] Date operations in templates.
