@@ -3,13 +3,13 @@
 module.exports =
 class Logger
   constructor: (debug) ->
-    @debug = debug
+    @isDebug = debug
 
   info: (strs...) ->
     console.log("INFO:", strs...)
 
   debug: (strs...) ->
-    if @debug
+    if @isDebug
       console.debug("DEBUG:", strs...)
 
   error: (strs...) ->

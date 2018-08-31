@@ -47,7 +47,15 @@ class Hikaru
       @logger.info("Hikaru finished initialization in `#{workDir}`.")
     ).catch(@logger.error)
 
-  clean: (workDir = ".") ->
+  clean: (workDir = ".", configPath, docDir) =>
+    @workDir = workDir
+    configPath = configPath or path.join(@workDir, "config.yml")
+    @siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
+    path.join(@workDir, "doc")
+    fse.emptyDir(@docDir).then(() =>
+      @logger.info("Hikaru cleaned `#{@docDir}/`.")
+    ).catch(@logger.error)
 
   generate: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
     @workDir = workDir
@@ -61,24 +69,34 @@ class Hikaru
     then path.join(themeDir, "src")
     else path.join(@workDir, @siteConfig["themeDir"], "src") or
     path.join(@workDir, "themes", "aria", "src"))
-    @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
-    "config.yml")))
+    try
+      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
+      "config.yml")))
+    catch err
+      if err["code"] is "ENOENT"
+        @logger.info("Hikaru continues with a empty theme config...")
+        @themeConfig = {}
     @renderer = new Renderer(@logger)
     @router = new Router(@logger, @renderer, @srcDir, @docDir, @themeDir)
-    @registerRenderer()
+    @registerInternalRoutes()
+    @router.route()
 
-  registerRenderer: () =>
+  registerInternalRoutes: () =>
     templateDir = @themeDir
     njkConfig = Object.assign({"autoescape": false}, @siteConfig["nunjucks"])
     njkEnv = nunjucks.configure(templateDir, njkConfig)
-    @renderer.register(".njk", ".njk", (data, ctx) =>
-      return new Promise((resolve, reject) =>
-        try
-          resolve(nunjucks.compile(data["text"], njkEnv,
-          path.join(@siteConfig["theme"], data["srcPath"])))
-        catch err
-          reject(err)
-      )
+    @router.register(".njk", (text, fullPath, ctx) ->
+      # For template you must give a render function.
+      template = nunjucks.compile(text, njkEnv, fullPath)
+      njkRender = (ctx) ->
+        return new Promise((resolve, reject) ->
+          template.render(ctx, (err, res) ->
+            if err
+              return reject(err)
+            return resolve(res)
+          )
+        )
+      return njkRender
     )
 
     markedConfig = Object.assign({"gfm": true} or @siteConfig["marked"])
@@ -100,25 +118,18 @@ class Hikaru
           "gutter": markedConfig["gutter"] or true
         })
     })
-    @renderer.register(".md", ".html", (data, ctx) ->
-      return new Promise((resolve, reject) ->
-        data["html"] = marked(data["text"],
-        Object.assign({"renderer": renderer}, markedConfig))
-        ctx["layout"].render({
-          "page": {"content": data["html"]},
-          "title": data["frontMatter"]?["title"]
-        }, (err, res) ->
-          if err
-            return reject(err)
-          return resolve(res)
-        )
+    @router.register(".md", ".html", (text, fullPath, ctx) ->
+      return marked(
+        text, Object.assign({
+          "renderer": renderer
+        }, markedConfig)
       )
     )
 
     stylConfig = @siteConfig.stylus or {}
-    @renderer.register(".styl", ".css", (data, ctx) ->
+    @router.register(".styl", ".css", (text, fullPath, ctx) ->
       return new Promise((resolve, reject) =>
-        stylus(data["text"])
+        stylus(text)
         .use(nib())
         .use((style) =>
           style.define("getSiteConfig", (data) =>
@@ -128,7 +139,7 @@ class Hikaru
           style.define("getThemeConfig", (data) =>
             return @themeConfig[data["val"]]
           )
-        ).set("filename", data["srcPath"])
+        ).set("filename", fullPath)
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
@@ -140,4 +151,4 @@ class Hikaru
       )
     )
     # TODO: CoffeeScript render.
-    @renderer.register(".coffee", ".js", (data, ctx) ->)
+    @router.register(".coffee", ".js", (text, fullPath, ctx) ->)
