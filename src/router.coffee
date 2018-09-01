@@ -14,6 +14,33 @@ class Router
     @extPairs = {}
     @templates = {}
     @pages = []
+    # [Post, Post, Post...]
+    @archives = []
+    ###
+    [
+      {
+        "name"：String,
+        "posts": [Post],
+        "subs": [
+          {
+            "name": String,
+            "posts": [Post],
+            "subs": []
+          }
+        ]
+      }
+    ]
+    ###
+    @categories = []
+    ###
+    [
+      {
+        "name": String,
+        "posts": [Post]
+      }
+    ]
+    ###
+    @tags = []
     @themeAssets = []
     @srcAssets = []
 
@@ -46,13 +73,23 @@ class Router
       @renderTemplates().then(() =>
         return @renderPages()
       ).then(() =>
+        @genSiteInfo()
         for data in @pages then do (data) =>
           # @template[layout]["content"] is a function receives ctx,
           # returns HTML.
-          layout = data["frontMatter"]["layout"] or "page"
+          layout = data["layout"]
+          # For currently debug.
+          if layout is "archives"
+            data["content"] = JSON.stringify(@archives, null, "  ")
+          else if layout is "categories"
+            data["content"] = JSON.stringify(@categories, null, "  ")
+          else if layout is "tags"
+            data["content"] = JSON.stringify(@tags, null, "  ")
+          if layout not of @templates
+            layout = "page"
           @templates[layout]["content"]({
             "page": {
-              "title": data["frontMatter"]["title"]
+              "title": data["title"]
               "content": data["content"],
             }
           }).then((res) =>
@@ -90,6 +127,53 @@ class Router
       docExt = @extPairs[srcExt]
       return path.join(dirname, "#{basename}#{docExt}")
     return data["srcPath"]
+
+  genSiteInfo: () =>
+    for data in @pages
+      if data["layout"] is "post"
+        @archives.push(data)
+        if data["categories"]?
+          subCategories = @categories
+          for cateName in data["categories"]
+            for category in subCategories
+              if category["name"] is cateName
+                category["posts"].push(data)
+                subCategories = category["subs"]
+                break
+            newCate = {"name": cateName, "posts": [data], "subs": []}
+            subCategories.push(newCate)
+            subCategories = newCate["subs"]
+        if data["tags"]?
+          for tagName in data["tags"]
+            for tag in @tags
+              if tag["name"] is tagName
+                tag["posts"].push(data)
+                break
+            @tags.push({"name": tagName, "posts": [data]})
+    @archives.sort((a, b) ->
+      return -(a["date"] - b["date"])
+    )
+    sortCategories = (category) ->
+      category["posts"].sort((a, b) ->
+        return -(a["date"] - b["date"])
+      )
+      category["subs"].sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for sub in category["subs"]
+        sortCategories(sub)
+    @categories.sort((a, b) ->
+      return a["name"].localeCompare(b["name"])
+    )
+    for sub in @categories
+      sortCategories(sub)
+    @tags.sort((a, b) ->
+      return a["name"].localeCompare(b["name"])
+    )
+    for tag in @tags
+      tag["posts"].sort((a, b) ->
+        return -(a["date"] - b["date"])
+      )
 
   loadTemplates: () =>
     templateFiles = await @matchFiles("*.*", {"cwd": @themeDir})
@@ -164,9 +248,10 @@ class Router
             parsed = fm(raw)
             data["text"] = parsed["body"]
             if parsed["frontmatter"]?
-              data["frontMatter"] = parsed["attributes"]
-          # Pages contains a valid yaml front matter while assets does not.
-          if data["frontMatter"]?
+              data = Object.assign(data, parsed["attributes"])
+          if data["date"]?
+            data["date"] = new Date(data["date"])
+          if data["text"] isnt data["raw"]?
             @pages.push(data)
           else
             @srcAssets.push(data)

@@ -14,13 +14,14 @@ A static site generator that generates routes based on directories naturally.
 - [X] Nunjucks template renderer.
 - [X] Highlight.js code highlight.
 - [X] Async loading, rendering and saving file.
-- [ ] Pagination.
+- [ ] Pagination for index, archives, categories (different category pages) and tags (different tag pages).
 - [ ] Archives info for templating.
 - [ ] Categories info for templating.
 - [ ] Tags info for templating.
 - [ ] Cheerio-based toc generating.
 - [ ] Cheerio-based path converting (relative to absolute).
 - [ ] Date operations in templates.
+- [ ] sprintf-js based multi-languages support.
 
 # Dir Structure
 
