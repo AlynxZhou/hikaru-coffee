@@ -8,8 +8,9 @@ class Renderer
 
   # fn: param text, fullPath, ctx, return Promise
   register: (srcExt, fn) =>
-    if srcExt instanceof Object
-      @store[srcExt["srcExt"]] = srcExt["fn"]
+    if srcExt instanceof Array
+      for s in srcExt
+        @store[s] = fn
       return
     @store[srcExt] = fn
 

@@ -1,6 +1,8 @@
 fse = require("fs-extra")
 path = require("path")
 
+cheerio = require("cheerio")
+
 yaml = require("js-yaml")
 nunjucks = require("nunjucks")
 marked = require("marked")
@@ -282,6 +284,26 @@ class Hikaru
         @siteConfig["perPage"]))
       results.push(Object.assign({"posts": tags}, page))
       return results
+    )
+
+    @generator.register(["post", "page"], (page, posts) ->
+      $ = cheerio.load(page["content"])
+      hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
+      headings = $(hNames.join(", "))
+      toc = []
+      for h in headings
+        level = toc
+        while level.length > 0 and
+        hNames.indexOf(level[level.length - 1]["name"]) <
+        hNames.indexOf(h["name"])
+          level = level[level.length - 1]["subs"]
+        level.push({
+          "id": $(h).attr("id"),
+          "name": h["name"]
+          "text": $(h).text().trim(),
+          "subs": []
+        })
+      return Object.assign({"toc": toc}, page)
     )
 
 paginate = (page, posts, perPage) ->

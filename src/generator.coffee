@@ -6,8 +6,9 @@ class Generator
 
   # fn: param page, pages, return Promise
   register: (layout, fn) =>
-    if layout instanceof Object
-      @store[layout["layout"]] = layout["fn"]
+    if layout instanceof Array
+      for l in layout
+        @store[l] = fn
       return
     @store[layout] = fn
 
