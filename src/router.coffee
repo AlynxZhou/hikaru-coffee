@@ -1,46 +1,23 @@
 "use strict"
+
 fse = require("fs-extra")
 fm = require("front-matter")
 path = require("path")
 glob = require("glob")
+
 module.exports =
 class Router
-  constructor: (logger, renderer, srcDir, docDir, themeDir) ->
+  constructor: (logger, renderer, generator, srcDir, docDir, themeDir) ->
     @logger = logger
     @renderer = renderer
+    @generator = generator
     @srcDir = srcDir
     @docDir = docDir
     @themeDir = themeDir
-    @extPairs = {}
+    @store = {}
     @templates = {}
     @pages = []
-    # [Post, Post, Post...]
-    @archives = []
-    ###
-    [
-      {
-        "name"：String,
-        "posts": [Post],
-        "subs": [
-          {
-            "name": String,
-            "posts": [Post],
-            "subs": []
-          }
-        ]
-      }
-    ]
-    ###
-    @categories = []
-    ###
-    [
-      {
-        "name": String,
-        "posts": [Post]
-      }
-    ]
-    ###
-    @tags = []
+    @posts = []
     @themeAssets = []
     @srcAssets = []
 
@@ -73,31 +50,28 @@ class Router
       @renderTemplates().then(() =>
         return @renderPages()
       ).then(() =>
-        @genSiteInfo()
-        for data in @pages then do (data) =>
+        @posts.sort((a, b) ->
+          return -(a["date"] - b["date"])
+        )
+        for i in [0...@posts.length]
+          if i > 0
+            @posts[i]["next"] = @posts[i - 1]
+          if i < @posts.length - 1
+            @posts[i]["prev"] = @posts[i + 1]
+        for page in @pages then do (page) =>
+          pages = @generator.generate(page, @posts)
+          if pages not instanceof Array
+            pages = [pages]
+          @pages = @pages.concat(pages)
+        for page in @pages then do (page) =>
           # @template[layout]["content"] is a function receives ctx,
           # returns HTML.
-          layout = data["layout"]
-          # For currently debug.
-          if layout is "archives"
-            data["content"] = JSON.stringify(@archives, null, "  ")
-          else if layout is "categories"
-            data["content"] = JSON.stringify(@categories, null, "  ")
-          else if layout is "tags"
-            data["content"] = JSON.stringify(@tags, null, "  ")
+          layout = page["layout"]
           if layout not of @templates
             layout = "page"
-          @templates[layout]["content"]({
-            "page": {
-              "title": data["title"]
-              "content": data["content"],
-            }
-          }).then((res) =>
-            data["content"] = res
-            @logger.debug("Hikaru is saving `#{data["docPath"]}`...")
-            fse.outputFile(path.join(@docDir, data["docPath"]),
-            data["content"])
-          )
+          res = await @templates[layout]["content"](page)
+          @logger.debug("Hikaru is saving `#{page["docPath"]}`...")
+          fse.outputFile(path.join(@docDir, page["docPath"]), res)
       )
     )
 
@@ -108,7 +82,7 @@ class Router
       @renderer.register(srcExt, fn)
       return
     @renderer.register(srcExt, fn)
-    @extPairs[srcExt] = docExt
+    @store[srcExt] = docExt
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -121,59 +95,12 @@ class Router
 
   getDocPath: (data) =>
     srcExt = path.extname(data["srcPath"])
-    if srcExt of @extPairs
+    if srcExt of @store
       dirname = path.dirname(data["srcPath"])
       basename = path.basename(data["srcPath"], srcExt)
-      docExt = @extPairs[srcExt]
+      docExt = @store[srcExt]
       return path.join(dirname, "#{basename}#{docExt}")
     return data["srcPath"]
-
-  genSiteInfo: () =>
-    for data in @pages
-      if data["layout"] is "post"
-        @archives.push(data)
-        if data["categories"]?
-          subCategories = @categories
-          for cateName in data["categories"]
-            for category in subCategories
-              if category["name"] is cateName
-                category["posts"].push(data)
-                subCategories = category["subs"]
-                break
-            newCate = {"name": cateName, "posts": [data], "subs": []}
-            subCategories.push(newCate)
-            subCategories = newCate["subs"]
-        if data["tags"]?
-          for tagName in data["tags"]
-            for tag in @tags
-              if tag["name"] is tagName
-                tag["posts"].push(data)
-                break
-            @tags.push({"name": tagName, "posts": [data]})
-    @archives.sort((a, b) ->
-      return -(a["date"] - b["date"])
-    )
-    sortCategories = (category) ->
-      category["posts"].sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
-      category["subs"].sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      for sub in category["subs"]
-        sortCategories(sub)
-    @categories.sort((a, b) ->
-      return a["name"].localeCompare(b["name"])
-    )
-    for sub in @categories
-      sortCategories(sub)
-    @tags.sort((a, b) ->
-      return a["name"].localeCompare(b["name"])
-    )
-    for tag in @tags
-      tag["posts"].sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
 
   loadTemplates: () =>
     templateFiles = await @matchFiles("*.*", {"cwd": @themeDir})
@@ -253,6 +180,8 @@ class Router
             data["date"] = new Date(data["date"])
           if data["text"] isnt data["raw"]?
             @pages.push(data)
+            if data["layout"] is "post"
+              @posts.push(data)
           else
             @srcAssets.push(data)
         )

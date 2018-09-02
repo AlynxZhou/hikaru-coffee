@@ -14,14 +14,16 @@ A static site generator that generates routes based on directories naturally.
 - [X] Nunjucks template renderer.
 - [X] Highlight.js code highlight.
 - [X] Async loading, rendering and saving file.
-- [ ] Pagination for index, archives, categories (different category pages) and tags (different tag pages).
-- [ ] Archives info for templating.
-- [ ] Categories info for templating.
-- [ ] Tags info for templating.
+- [X] Pagination for index, archives, categories (different category pages) and tags (different tag pages).
+- [X] Archives info for templating.
+- [X] Categories info for templating.
+- [X] Tags info for templating.
 - [ ] Cheerio-based toc generating.
 - [ ] Cheerio-based path converting (relative to absolute).
 - [ ] Date operations in templates.
 - [ ] sprintf-js based multi-languages support.
+- [ ] Local search JSON gengrating.
+- [ ] File watch and live reload server.
 
 # Dir Structure
 
@@ -49,16 +51,17 @@ hikura-site/
     |   |- about/
     |   |   |- index.html
     |   |- tags/
-    |   |   |- index.html
+    |   |   |- index.html # layout: tags
     |   |   |- tag-1/
-    |   |   |   |- index.html # automatically generated
+    |   |   |   |- index.html # automatically generated, layout: tag
     |   |   |   |- 2.html # page 2 of tag-1
     |- themes/
     |   |- aria/
     |   |   |- src/ # this will be render to doc/
     |   |   |   |- layout.njk # templates
     |   |   |   |- index.njk
-    |   |   |   |- about.njk
+    |   |   |   |- tags.njk
+    |   |   |   |- tag.njk
     |   |   |   |- page.njk # if no layout specific, fallback to this
     |   |   |   |- css/
     |   |   |   |   |- index.styl

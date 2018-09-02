@@ -13,6 +13,7 @@ coffee = require("coffeescript")
 highlight = require("./highlight")
 Logger = require("./logger")
 Renderer = require("./renderer")
+Generator = require("./generator")
 Router = require("./router")
 
 module.exports =
@@ -77,8 +78,11 @@ class Hikaru
         @logger.info("Hikaru continues with a empty theme config...")
         @themeConfig = {}
     @renderer = new Renderer(@logger)
-    @router = new Router(@logger, @renderer, @srcDir, @docDir, @themeDir)
+    @generator = new Generator(@logger)
+    @router = new Router(@logger, @renderer, @generator,
+    @srcDir, @docDir, @themeDir)
     @registerInternalRoutes()
+    @registerInternalGenerators()
     @router.route()
 
   registerInternalRoutes: () =>
@@ -99,7 +103,7 @@ class Hikaru
       return njkRender
     )
 
-    markedConfig = Object.assign({"gfm": true} or @siteConfig["marked"])
+    markedConfig = Object.assign({"gfm": true}, @siteConfig["marked"])
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = text.toLowerCase().replace(/[^\w]+/g, '-')
@@ -152,3 +156,153 @@ class Hikaru
     )
     # TODO: CoffeeScript render.
     @router.register(".coffee", ".js", (text, fullPath, ctx) ->)
+
+  registerInternalGenerators: () =>
+    @generator.register("index", (page, posts) =>
+      posts.sort((a, b) ->
+        return -(a["date"] - b["date"])
+      )
+      return paginate(page, posts, @siteConfig["perPage"])
+    )
+
+    @generator.register("archives", (page, posts) =>
+      posts.sort((a, b) ->
+        return -(a["date"] - b["date"])
+      )
+      return paginate(page, posts, @siteConfig["perPage"])
+    )
+
+    ###
+    [
+      {
+        "name"：String,
+        "posts": [Post],
+        "subs": [
+          {
+            "name": String,
+            "posts": [Post],
+            "subs": []
+          }
+        ]
+      }
+    ]
+    ###
+    sortCategories = (category) ->
+      category["posts"].sort((a, b) ->
+        return -(a["date"] - b["date"])
+      )
+      category["subs"].sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for sub in category["subs"]
+        sortCategories(sub)
+    paginateCategories = (category, page, parentPath) =>
+      results = []
+      p = Object.assign({}, page)
+      p["layout"] = "category"
+      p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
+      p["title"] = "#{category["name"]}"
+      results = results.concat(paginate(p, category["posts"],
+      @siteConfig["perPage"]))
+      for sub in category["subs"]
+        results = results.concat(
+          paginateCategories(
+            sub, page, path.join(
+              parentPath, "#{category["name"]}"
+            )
+          )
+        )
+      return results
+    @generator.register("categories", (page, posts) ->
+      categories = []
+      for post in posts
+        if not post["categories"]?
+          continue
+        subCategories = categories
+        for cateName in post["categories"]
+          found = false
+          for category in subCategories
+            if category["name"] is cateName
+              found = true
+              category["posts"].push(post)
+              subCategories = category["subs"]
+              break
+          if not found
+            newCate = {"name": cateName, "posts": [post], "subs": []}
+            subCategories.push(newCate)
+            subCategories = newCate["subs"]
+      categories.sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for sub in categories
+        sortCategories(sub)
+      results = []
+      for sub in categories
+        results = results.concat(paginateCategories(sub, page,
+        path.dirname(page["docPath"])))
+      results.push(Object.assign({"posts": categories}, page))
+      return results
+    )
+
+    ###
+    [
+      {
+        "name": String,
+        "posts": [Post]
+      }
+    ]
+    ###
+    @generator.register("tags", (page, posts) =>
+      tags = []
+      for post in posts
+        if not post["tags"]?
+          continue
+        for tagName in post["tags"]
+          found = false
+          for tag in tags
+            if tag["name"] is tagName
+              found = true
+              tag["posts"].push(post)
+              break
+          if not found
+            tags.push({"name": tagName, "posts": [post]})
+      tags.sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for tag in tags
+        tag["posts"].sort((a, b) ->
+          return -(a["date"] - b["date"])
+        )
+      results = []
+      for tag in tags
+        p = Object.assign({}, page)
+        p["layout"] = "tag"
+        p["docPath"] = path.join(path.dirname(page["docPath"]),
+        "#{tag["name"]}", "index.html")
+        p["title"] = "#{tag["name"]}"
+        results = results.concat(paginate(p, tag["posts"],
+        @siteConfig["perPage"]))
+      results.push(Object.assign({"posts": tags}, page))
+      return results
+    )
+
+paginate = (page, posts, perPage) ->
+  if not perPage
+    perPage = 10
+  results = []
+  perPagePosts = []
+  for post in posts
+    if perPagePosts.length is perPage
+      results.push(Object.assign({"posts": perPagePosts}, page))
+      perPagePosts = []
+    perPagePosts.push(post)
+  results.push(Object.assign({"posts": perPagePosts}, page))
+  results[0]["pageArray"] = results
+  results[0]["pageIndex"] = 1
+  results[0]["docPath"] = page["docPath"]
+  for i in [1...results.length]
+    results[i]["pageArray"] = results
+    results[i]["pageIndex"] = i + 1
+    results[i]["docPath"] = path.join(path.dirname(page["docPath"]),
+    "#{results[i]["pageIndex"]}.html")
+  return results
