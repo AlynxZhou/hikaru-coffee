@@ -1,5 +1,3 @@
-"use strict"
-
 fse = require("fs-extra")
 path = require("path")
 

@@ -1,5 +1,3 @@
-"use strict"
-
 module.exports =
 class Generator
   constructor: (logger) ->

@@ -1,4 +1,3 @@
-"use strict"
 hljs = require("highlight.js")
 
 aliases = null

@@ -1,5 +1,5 @@
-"use strict"
 path = require("path")
+
 module.exports =
 class Renderer
   constructor: (logger) ->

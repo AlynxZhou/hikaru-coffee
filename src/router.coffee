@@ -1,5 +1,3 @@
-"use strict"
-
 fse = require("fs-extra")
 fm = require("front-matter")
 path = require("path")

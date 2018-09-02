@@ -1,5 +1,4 @@
 #!/usr/bin/env coffee
-"use strict"
 
 packageJSON = require("../package.json")
 commander = require("commander")
