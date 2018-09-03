@@ -18,11 +18,12 @@ A static site generator that generates routes based on directories naturally.
 - [X] Archives info for templating.
 - [X] Categories info for templating.
 - [X] Tags info for templating.
-- [ ] Cheerio-based toc generating.
-- [ ] Cheerio-based path converting (relative to absolute).
-- [ ] Date operations in templates.
+- [X] Cheerio-based toc generating.
+- [X] Cheerio-based path converting (relative to absolute).
+- [X] Date operations in templates.
 - [ ] sprintf-js based multi-languages support.
-- [ ] Local search JSON gengrating.
+- [X] Local search JSON gengrating.
+- [ ] Theme ARIA migration.
 - [ ] File watch and live reload server.
 
 # Dir Structure

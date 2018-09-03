@@ -158,18 +158,18 @@ class Hikaru
     @router.register(".coffee", ".js", (text, fullPath, ctx) ->)
 
   registerInternalGenerators: () =>
-    @generator.register("index", (page, posts) =>
+    @generator.register("index", (page, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(page, posts, @siteConfig["perPage"])
+      return paginate(page, posts, ctx, @siteConfig["perPage"])
     )
 
-    @generator.register("archives", (page, posts) =>
+    @generator.register("archives", (page, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(page, posts, @siteConfig["perPage"])
+      return paginate(page, posts, ctx, @siteConfig["perPage"])
     )
 
     ###
@@ -196,24 +196,24 @@ class Hikaru
       )
       for sub in category["subs"]
         sortCategories(sub)
-    paginateCategories = (category, page, parentPath) =>
+    paginateCategories = (category, page, parentPath, ctx) =>
       results = []
       p = Object.assign({}, page)
       p["layout"] = "category"
       p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
       p["title"] = "#{category["name"]}"
-      results = results.concat(paginate(p, category["posts"],
+      results = results.concat(paginate(p, category["posts"], ctx,
       @siteConfig["perPage"]))
       for sub in category["subs"]
         results = results.concat(
           paginateCategories(
             sub, page, path.join(
               parentPath, "#{category["name"]}"
-            )
+            ), ctx
           )
         )
       return results
-    @generator.register("categories", (page, posts) ->
+    @generator.register("categories", (page, posts, ctx) ->
       categories = []
       for post in posts
         if not post["categories"]?
@@ -239,8 +239,8 @@ class Hikaru
       results = []
       for sub in categories
         results = results.concat(paginateCategories(sub, page,
-        path.dirname(page["docPath"])))
-      results.push(Object.assign({"posts": categories}, page))
+        path.dirname(page["docPath"]), ctx))
+      results.push(Object.assign(ctx, page, {"posts": categories}))
       return results
     )
 
@@ -252,7 +252,7 @@ class Hikaru
       }
     ]
     ###
-    @generator.register("tags", (page, posts) =>
+    @generator.register("tags", (page, posts, ctx) =>
       tags = []
       for post in posts
         if not post["tags"]?
@@ -281,13 +281,14 @@ class Hikaru
         "#{tag["name"]}", "index.html")
         p["title"] = "#{tag["name"]}"
         results = results.concat(paginate(p, tag["posts"],
-        @siteConfig["perPage"]))
-      results.push(Object.assign({"posts": tags}, page))
+        ctx, @siteConfig["perPage"]))
+      results.push(Object.assign(ctx, page, {"posts": tags}))
       return results
     )
 
-    @generator.register(["post", "page"], (page, posts) ->
+    @generator.register(["post", "page"], (page, posts, ctx) ->
       $ = cheerio.load(page["content"])
+      # TOC generate.
       hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
       headings = $(hNames.join(", "))
       toc = []
@@ -303,20 +304,42 @@ class Hikaru
           "text": $(h).text().trim(),
           "subs": []
         })
-      return Object.assign({"toc": toc}, page)
+      # Replace relative path to absolute path.
+      links = $("a")
+      for a in links
+        href = $(a).attr("href")
+        if href.startsWith("https://") or href.startsWith("http://") or
+        href.startsWith("//") or href.startsWith("/") or
+        href.startsWith("#")
+          continue
+        $(a).attr("href", path.posix.join(path.posix.sep,
+        path.posix.dirname(page["docPath"]), href))
+      imgs = $("img")
+      for i in imgs
+        src = $(i).attr("src")
+        if src.startsWith("https://") or src.startsWith("http://") or
+        src.startsWith("//") or src.startsWith("/") or
+        src.startsWith("data:image")
+          continue
+        $(i).attr("src", path.posix.join(path.posix.sep,
+        path.posix.dirname(page["docPath"]), src))
+      return Object.assign(ctx, page, {
+        "toc": toc,
+        "content": $("body").html()
+      })
     )
 
-paginate = (page, posts, perPage) ->
+paginate = (page, posts, ctx, perPage) ->
   if not perPage
     perPage = 10
   results = []
   perPagePosts = []
   for post in posts
     if perPagePosts.length is perPage
-      results.push(Object.assign({"posts": perPagePosts}, page))
+      results.push(Object.assign(ctx, page, {"posts": perPagePosts}))
       perPagePosts = []
     perPagePosts.push(post)
-  results.push(Object.assign({"posts": perPagePosts}, page))
+  results.push(Object.assign(ctx, page, {"posts": perPagePosts}))
   results[0]["pageArray"] = results
   results[0]["pageIndex"] = 1
   results[0]["docPath"] = page["docPath"]

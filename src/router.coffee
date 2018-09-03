@@ -57,10 +57,20 @@ class Router
           if i < @posts.length - 1
             @posts[i]["prev"] = @posts[i + 1]
         for page in @pages then do (page) =>
-          pages = @generator.generate(page, @posts)
+          pages = @generator.generate(page, @posts, {"Date": Date})
           if pages not instanceof Array
             pages = [pages]
           @pages = @pages.concat(pages)
+        search = []
+        for page in @pages
+          search.push({
+            "title": page["title"],
+            "url": path.posix.join(path.posix.sep, page["docPath"]),
+            "content": page["text"]
+          })
+        @logger.debug("Hikaru is saving `search.json`...")
+        fse.outputFile(path.join(@docDir, "search.json"),
+        JSON.stringify(search))
         for page in @pages then do (page) =>
           # @template[layout]["content"] is a function receives ctx,
           # returns HTML.
