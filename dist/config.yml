@@ -1,7 +1,23 @@
+title: Hikaru Site
+subtitle:
+description:
+author: Hikaru
+language: default
+# timezone: Asia/Shanghai
+
+# rootDir must start with `/` while url shouldn't end with `/`.
+url: https://sh.alynx.xyz
+rootDir: /
+
+perPage: 10
+
 srcDir: src
 docDir: doc
-themeDir: themes/aria
+themeDir: aria
 
 marked:
   gutter: true
   hljs: true
+
+search:
+  path: search.json

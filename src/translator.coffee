@@ -6,7 +6,7 @@ class Translator
     @language = language
 
   __: (key) =>
-    keys = key.split(".")
+    keys = key.toString().split(".")
     res = @language
     for k in keys
       if k not of res
@@ -17,7 +17,7 @@ class Translator
     return key
 
   _p: (key, args...) =>
-    keys = key.split(".")
+    keys = key.toString().split(".")
     res = @language
     for k in keys
       if k not of res

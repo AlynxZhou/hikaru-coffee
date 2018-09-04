@@ -34,7 +34,8 @@ Generator: Receive page(data), posts and ctx then return a promise of data.
 - [X] Date operations in templates.
 - [X] sprintf-js based multi-languages support.
 - [X] Local search JSON gengrating.
-- [ ] Porting theme ARIA.
+- [ ] RSS feed generating.
+- [ ] Porting theme ARIA (Need to fix marked automatically added `<pre><code></pre></code>`).
 - [ ] File watch and live reload server.
 
 # Dir Structure

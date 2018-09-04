@@ -25,5 +25,10 @@ class Renderer
       else
         data["docPath"] = data["srcPath"]
       return @store[srcExt]["fn"](data, ctx)
-    data["docPath"] = data["srcPath"]
-    return data
+    return new Promise((resolve, reject) ->
+      try
+        data["docPath"] = data["srcPath"]
+        resolve(data)
+      catch err
+        reject(err)
+    )

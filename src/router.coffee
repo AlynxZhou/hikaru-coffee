@@ -2,6 +2,8 @@ fse = require("fs-extra")
 fm = require("front-matter")
 path = require("path")
 glob = require("glob")
+moment = require("moment")
+{dateStrCompare} = require("./utils")
 
 module.exports =
 class Router
@@ -82,18 +84,15 @@ class Router
           if typeof(data["raw"]) is "string"
             parsed = fm(data["raw"])
             data["text"] = parsed["body"]
-            data = Object.assign(data, parsed["attributes"])
-            data["date"] = new Date(data["date"])
+            data = Object.assign({}, data, parsed["attributes"])
             if data["text"] isnt data["raw"]
               return @renderer.render(data, null)
           @renderer.render(data, null).then((data) =>
-            @writeData(@themeSrcDir, data)
+            @writeData(@srcDir, data)
           )
           return null
         ))
-      return Promise.all(renderedPromises.filter((p) ->
-        return p?
-      ))
+      return Promise.all(renderedPromises)
     )
 
   route: () =>
@@ -102,23 +101,23 @@ class Router
       return @routeSrcs()
     ).then((renderedPages) =>
       for p in renderedPages
+        if not p?
+          continue
         if p["layout"] is "post"
           @posts.push(p)
         else
           @pages.push(p)
       # Posts.
-      @posts.sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
+      @posts.sort(dateStrCompare)
       generatedPosts = []
       for post in @posts
         p = @generator.generate(post, null, {
           "siteConfig": @siteConfig,
           "themeConfig": @themeConfig,
-          "Date": Date,
+          "moment": moment,
+          "pathPos": path.posix,
           "__": @translator.__,
-          "_p": @translator._p,
-          "hello": () -> return "Hello"
+          "_p": @translator._p
         })
         if p not instanceof Array
           generatedPosts.push(p)
@@ -133,13 +132,15 @@ class Router
       # Pages.
       generatedPages = []
       for page in @pages
+        if page["layout"] not of @templates
+          page["layout"] = "page"
         p = @generator.generate(page, @posts, {
           "siteConfig": @siteConfig,
           "themeConfig": @themeConfig,
-          "Date": Date,
+          "moment": moment,
+          "pathPos": path.posix,
           "__": @translator.__,
-          "_p": @translator._p,
-          "hello": () -> return "Hello"
+          "_p": @translator._p
         })
         if p not instanceof Array
           generatedPages.push(p)
@@ -152,7 +153,7 @@ class Router
       for p in all
         search.push({
           "title": p["title"],
-          "url": path.posix.join(path.posix.sep, p["docPath"]),
+          "url": path.posix.join(@siteConfig["rootDir"], p["docPath"]),
           "content": p["text"]
         })
       @writeData(@srcPath, {
@@ -161,16 +162,10 @@ class Router
         "content": JSON.stringify(search)
       })
       for page in @pages
-        layout = page["layout"]
-        if layout not of @templates
-          layout = "page"
-        page["content"] = await @templates[layout](page)
+        page["content"] = await @templates[page["layout"]](page)
         @writeData(@srcDir, page)
       # Merge post and template last.
       for post in @posts
-        layout = post["layout"]
-        if layout not of @templates
-          layout = "page"
-        post["content"] = await @templates[layout](post)
+        post["content"] = await @templates[post["layout"]](post)
         @writeData(@srcDir, post)
     )

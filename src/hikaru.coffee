@@ -17,6 +17,14 @@ Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
 
+{
+  escapeHTML,
+  paginate,
+  dateStrCompare,
+  sortCategories,
+  paginateCategories
+} = require("./utils")
+
 module.exports =
 class Hikaru
   constructor: (debug = false) ->
@@ -95,7 +103,8 @@ class Hikaru
 
   registerInternalRenderers: () =>
     templateDir = @themeSrcDir
-    njkConfig = Object.assign({"autoescape": false}, @siteConfig["nunjucks"])
+    njkConfig = Object.assign({}, {"autoescape": false},
+    @siteConfig["nunjucks"])
     njkEnv = nunjucks.configure(templateDir, njkConfig)
     @renderer.register([".njk", ".j2"], null, (data, ctx) ->
       # For template you must give a render function.
@@ -111,11 +120,11 @@ class Hikaru
       return njkRender
     )
 
-    markedConfig = Object.assign({"gfm": true}, @siteConfig["marked"])
+    markedConfig = Object.assign({}, {"gfm": true}, @siteConfig["marked"])
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
-      escaped = text.toLowerCase().replace(/[^\w]+/g, '-')
-      return "<h#{level}>" +
+      escaped = escapeHTML(text)
+      return "<h#{level} id=\"h#{level}-#{escaped}\">" +
       "<a class=\"headerlink\" href=\"##{escaped}\" title=\"##{escaped}\">" +
       "</a>" +
       "#{text}" +
@@ -134,7 +143,7 @@ class Hikaru
         try
           data["content"] = marked(
             data["text"],
-            Object.assign({"renderer": renderer}, markedConfig)
+            Object.assign({}, {"renderer": renderer}, markedConfig)
           )
           return resolve(data)
         catch err
@@ -149,7 +158,7 @@ class Hikaru
         .use(nib())
         .use((style) =>
           style.define("getSiteConfig", (data) =>
-            keys = data["val"].split(".")
+            keys = data["val"].toString().split(".")
             res = @themeConfig
             for k in keys
               if k not of res
@@ -159,7 +168,7 @@ class Hikaru
           )
         ).use((style) =>
           style.define("getThemeConfig", (data) =>
-            keys = data["val"].split(".")
+            keys = data["val"].toString().split(".")
             res = @themeConfig
             for k in keys
               if k not of res
@@ -184,16 +193,12 @@ class Hikaru
 
   registerInternalGenerators: () =>
     @generator.register("index", (page, posts, ctx) =>
-      posts.sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
+      posts.sort(dateStrCompare)
       return paginate(page, posts, ctx, @siteConfig["perPage"])
     )
 
     @generator.register("archives", (page, posts, ctx) =>
-      posts.sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
+      posts.sort(dateStrCompare)
       return paginate(page, posts, ctx, @siteConfig["perPage"])
     )
 
@@ -212,33 +217,7 @@ class Hikaru
       }
     ]
     ###
-    sortCategories = (category) ->
-      category["posts"].sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
-      category["subs"].sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      for sub in category["subs"]
-        sortCategories(sub)
-    paginateCategories = (category, page, parentPath, ctx) =>
-      results = []
-      p = Object.assign({}, page)
-      p["layout"] = "category"
-      p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
-      category["docPath"] = p["docPath"]
-      p["title"] = "category"
-      p["name"] = "#{category["name"]}"
-      results = results.concat(paginate(p, category["posts"], ctx,
-      @siteConfig["perPage"]))
-      for sub in category["subs"]
-        results = results.concat(
-          paginateCategories(sub, page, path.join(
-            parentPath, "#{category["name"]}"
-          ), ctx)
-        )
-      return results
-    @generator.register("categories", (page, posts, ctx) ->
+    @generator.register("categories", (page, posts, ctx) =>
       categories = []
       for post in posts
         if not post["categories"]?
@@ -268,8 +247,8 @@ class Hikaru
       results = []
       for sub in categories
         results = results.concat(paginateCategories(sub, page,
-        path.dirname(page["docPath"]), ctx))
-      results.push(Object.assign(page, ctx, {"categories": categories}))
+        path.dirname(page["docPath"]), @siteConfig["perPage"], ctx))
+      results.push(Object.assign({}, page, ctx, {"categories": categories}))
       return results
     )
 
@@ -304,9 +283,7 @@ class Hikaru
         return a["name"].localeCompare(b["name"])
       )
       for tag in tags
-        tag["posts"].sort((a, b) ->
-          return -(a["date"] - b["date"])
-        )
+        tag["posts"].sort(dateStrCompare)
       results = []
       for tag in tags
         p = Object.assign({}, page)
@@ -315,10 +292,10 @@ class Hikaru
         "#{tag["name"]}", "index.html")
         tag["docPath"] = p["docPath"]
         p["title"] = "tag"
-        p["title"] = "#{tag["name"]}"
+        p["name"] = tag["name"]
         results = results.concat(paginate(p, tag["posts"],
         ctx, @siteConfig["perPage"]))
-      results.push(Object.assign(page, ctx, {"tags": tags}))
+      results.push(Object.assign({}, page, ctx, {"tags": tags}))
       return results
     )
 
@@ -359,29 +336,10 @@ class Hikaru
           continue
         $(i).attr("src", path.posix.join(path.posix.sep,
         path.posix.dirname(page["docPath"]), src))
-      return Object.assign(page, ctx, {
-        "toc": toc,
-        "content": $("body").html()
-      })
+      page["content"] = $("body").html()
+      if page["content"].indexOf("<!--more-->") isnt -1
+        split = page["content"].split("<!--more-->")
+        page["excerpt"] = split[0]
+        page["more"] = split[1]
+      return Object.assign({}, page, ctx, {"toc": toc})
     )
-
-paginate = (page, posts, ctx, perPage) ->
-  if not perPage
-    perPage = 10
-  results = []
-  perPagePosts = []
-  for post in posts
-    if perPagePosts.length is perPage
-      results.push(Object.assign(page, ctx, {"posts": perPagePosts}))
-      perPagePosts = []
-    perPagePosts.push(post)
-  results.push(Object.assign(page, ctx, {"posts": perPagePosts}))
-  results[0]["pageArray"] = results
-  results[0]["pageIndex"] = 1
-  results[0]["docPath"] = page["docPath"]
-  for i in [1...results.length]
-    results[i]["pageArray"] = results
-    results[i]["pageIndex"] = i + 1
-    results[i]["docPath"] = path.join(path.dirname(page["docPath"]),
-    "#{results[i]["pageIndex"]}.html")
-  return results
