@@ -6,6 +6,17 @@ A static site generator that generates routes based on directories naturally.
 
 # NOT FINISHED YET, JUST IMPLEMENTED VERY SIMPLE FUNCTIONS.
 
+# Refactor
+
+Router:
+    - Load each post then compile template and cache and render then call generator then save.
+    - Load each asset then render then save.
+    - Load each page then compile template and cache and render then call generator then save.
+
+Renderer: Register srcExt, docExt and fn, render data and return a promise of data.
+
+Generator: Receive page(data), posts and ctx then return a promise of data.
+
 # List
 
 - [X] Dir based router.
@@ -21,7 +32,7 @@ A static site generator that generates routes based on directories naturally.
 - [X] Cheerio-based toc generating.
 - [X] Cheerio-based path converting (relative to absolute).
 - [X] Date operations in templates.
-- [ ] sprintf-js based multi-languages support.
+- [X] sprintf-js based multi-languages support.
 - [X] Local search JSON gengrating.
 - [ ] Theme ARIA migration.
 - [ ] File watch and live reload server.

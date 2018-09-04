@@ -5,92 +5,18 @@ glob = require("glob")
 
 module.exports =
 class Router
-  constructor: (logger, renderer, generator, srcDir, docDir, themeDir) ->
+  constructor: (logger, renderer, generator, translator,
+  srcDir, docDir, themeSrcDir) ->
     @logger = logger
     @renderer = renderer
     @generator = generator
+    @translator = translator
     @srcDir = srcDir
     @docDir = docDir
-    @themeDir = themeDir
-    @store = {}
+    @themeSrcDir = themeSrcDir
     @templates = {}
     @pages = []
     @posts = []
-    @themeAssets = []
-    @srcAssets = []
-
-  route: () =>
-    @loadThemeAssets().then(() =>
-      return @renderThemeAssets()
-    ).then(() =>
-      for data in @themeAssets then do (data) =>
-        @logger.debug("Hikaru is saving `#{data["docPath"]}`...")
-        if data["content"]?
-          fse.outputFile(path.join(@docDir, data["docPath"]), data["content"])
-        else
-          fse.copy(
-            path.join(@themeDir, data["srcPath"]),
-            path.join(@docDir, data["docPath"])
-          )
-    )
-    Promise.all([@loadTemplates(), @loadSrc()]).then(() =>
-      @renderSrcAssets().then(() =>
-        for data in @srcAssets then do (data) =>
-          @logger.debug("Hikaru is saving `#{data["docPath"]}`...")
-          if data["content"]?
-            fse.outputFile(path.join(@docDir, data["docPath"]), data["content"])
-          else
-            fse.copy(
-              path.join(@srcDir, data["srcPath"]),
-              path.join(@docDir, data["docPath"])
-            )
-      )
-      @renderTemplates().then(() =>
-        return @renderPages()
-      ).then(() =>
-        @posts.sort((a, b) ->
-          return -(a["date"] - b["date"])
-        )
-        for i in [0...@posts.length]
-          if i > 0
-            @posts[i]["next"] = @posts[i - 1]
-          if i < @posts.length - 1
-            @posts[i]["prev"] = @posts[i + 1]
-        for page in @pages then do (page) =>
-          pages = @generator.generate(page, @posts, {"Date": Date})
-          if pages not instanceof Array
-            pages = [pages]
-          @pages = @pages.concat(pages)
-        search = []
-        for page in @pages
-          search.push({
-            "title": page["title"],
-            "url": path.posix.join(path.posix.sep, page["docPath"]),
-            "content": page["text"]
-          })
-        @logger.debug("Hikaru is saving `search.json`...")
-        fse.outputFile(path.join(@docDir, "search.json"),
-        JSON.stringify(search))
-        for page in @pages then do (page) =>
-          # @template[layout]["content"] is a function receives ctx,
-          # returns HTML.
-          layout = page["layout"]
-          if layout not of @templates
-            layout = "page"
-          res = await @templates[layout]["content"](page)
-          @logger.debug("Hikaru is saving `#{page["docPath"]}`...")
-          fse.outputFile(path.join(@docDir, page["docPath"]), res)
-      )
-    )
-
-  # fn: param text, fullPath, ctx, return Promise
-  register: (srcExt, docExt, fn) =>
-    if docExt instanceof Function
-      fn = docExt
-      @renderer.register(srcExt, fn)
-      return
-    @renderer.register(srcExt, fn)
-    @store[srcExt] = docExt
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -101,113 +27,144 @@ class Router
       )
     )
 
-  getDocPath: (data) =>
-    srcExt = path.extname(data["srcPath"])
-    if srcExt of @store
-      dirname = path.dirname(data["srcPath"])
-      basename = path.basename(data["srcPath"], srcExt)
-      docExt = @store[srcExt]
-      return path.join(dirname, "#{basename}#{docExt}")
-    return data["srcPath"]
+  readData: (srcDir, srcPath) =>
+    @logger.debug("Hikaru is loading `#{srcPath}`...")
+    return fse.readFile(path.join(srcDir, srcPath), "utf8").then((raw) ->
+      return {
+        "srcPath": srcPath,
+        "text": raw,
+        "raw": raw
+      }
+    )
 
-  loadTemplates: () =>
-    templateFiles = await @matchFiles("*.*", {"cwd": @themeDir})
-    promiseQueue = []
-    for filePath in templateFiles then do (filePath) =>
-      @logger.debug("Hikaru is loading `#{filePath}`...")
-      promiseQueue.push(
-        fse.readFile(path.join(@themeDir, filePath), "utf8").then((raw) =>
-          data = {
-            "srcPath": filePath,
-            "text": raw,
-            "raw": raw
-          }
-          data["docPath"] = @getDocPath(data)
-          @templates[path.basename(filePath, path.extname(filePath))] = data
+  writeData: (srcDir, data) =>
+    @logger.debug("Hikaru is saving `#{data["docPath"]}`...")
+    if data["content"]?
+      return fse.outputFile(path.join(@docDir, data["docPath"]),
+      data["content"])
+    return fse.copy(
+      path.join(srcDir, data["srcPath"]),
+      path.join(@docDir, data["docPath"])
+    )
+
+  routeThemeAssets: () =>
+    @matchFiles(path.join("**", "*.*"),
+    {"cwd": @themeSrcDir}).then((themeSrcs) =>
+      themeSrcs.filter((srcPath) ->
+        # Asset is in sub dir.
+        return path.dirname(srcPath) isnt "."
+      ).map((srcPath) =>
+        return @readData(@themeSrcDir, srcPath).then((data) =>
+          return @renderer.render(data, null)
+        ).then((data) =>
+          return @writeData(@themeSrcDir, data)
         )
       )
-    return Promise.all(promiseQueue)
+    )
 
-  renderTemplates: () =>
-    promiseQueue = []
-    for key, data of @templates then do (data) =>
-      @logger.debug("Hikaru is rendering `#{data["srcPath"]}`...")
-      promiseQueue.push(data["content"] = @renderer.render(data["text"]
-      path.join(@themeDir, data["srcPath"])))
-    # Wait for all templates renderer finished.
-    return Promise.all(promiseQueue)
-
-  loadThemeAssets: () =>
-    themeAssetFiles = await @matchFiles(path.join("**", "*.*"),
-    {"cwd": @themeDir})
-    promiseQueue = []
-    for filePath in themeAssetFiles then do (filePath) =>
-      # Skip templates.
-      if path.dirname(filePath) is '.'
-        return
-      @logger.debug("Hikaru is loading `#{filePath}`...")
-      promiseQueue.push(
-        fse.readFile(path.join(@themeDir, filePath), "utf8").then((raw) =>
-          data = {
-            "srcPath": filePath,
-            "text": raw,
-            "raw": raw
-          }
-          data["docPath"] = @getDocPath(data)
-          @themeAssets.push(data)
+  routeTemplates: () =>
+    return @matchFiles("*.*", {"cwd": @themeSrcDir}).then((templates) =>
+      return Promise.all(templates.map((srcPath) =>
+        return @readData(@themeSrcDir, srcPath).then((data) =>
+          @templates[path.basename(srcPath,
+          path.extname(srcPath))] = @renderer.render(data, null)
         )
-      )
-    return Promise.all(promiseQueue)
+      ))
+    )
 
-  renderThemeAssets: () =>
-    promiseQueue = []
-    for data in @themeAssets then do (data) =>
-      @logger.debug("Hikaru is rendering `#{data["srcPath"]}`...")
-      promiseQueue.push(data["content"] = @renderer.render(data["text"],
-      path.join(@themeDir, data["srcPath"])))
-    return Promise.all(promiseQueue)
-
-  loadSrc: () =>
-    srcFiles = await @matchFiles(path.join("**", "*.*"), {"cwd": @srcDir})
-    promiseQueue = []
-    for filePath in srcFiles then do (filePath) =>
-      @logger.debug("Hikaru is loading `#{filePath}`...")
-      promiseQueue.push(
-        fse.readFile(path.join(@srcDir, filePath), "utf8").then((raw) =>
-          data = {
-            "srcPath": filePath,
-            "raw": raw
-          }
-          data["docPath"] = @getDocPath(data)
-          if typeof(raw) is "string"
-            parsed = fm(raw)
+  routeSrcs: () =>
+    return @matchFiles(path.join("**", "*.*"), {"cwd": @srcDir}).then((srcs) =>
+      renderedPromises = []
+      for srcPath in srcs then do (srcPath) =>
+        renderedPromises.push(@readData(@srcDir, srcPath).then((data) =>
+          if typeof(data["raw"]) is "string"
+            parsed = fm(data["raw"])
             data["text"] = parsed["body"]
-            if parsed["frontmatter"]?
-              data = Object.assign(data, parsed["attributes"])
-          if data["date"]?
+            data = Object.assign(data, parsed["attributes"])
             data["date"] = new Date(data["date"])
-          if data["text"] isnt data["raw"]?
-            @pages.push(data)
-            if data["layout"] is "post"
-              @posts.push(data)
-          else
-            @srcAssets.push(data)
-        )
+            if data["text"] isnt data["raw"]
+              return @renderer.render(data, null)
+          @renderer.render(data, null).then((data) =>
+            @writeData(@themeSrcDir, data)
+          )
+          return null
+        ))
+      return Promise.all(renderedPromises.filter((p) ->
+        return p?
+      ))
+    )
+
+  route: () =>
+    @routeThemeAssets()
+    @routeTemplates().then(() =>
+      return @routeSrcs()
+    ).then((renderedPages) =>
+      for p in renderedPages
+        if p["layout"] is "post"
+          @posts.push(p)
+        else
+          @pages.push(p)
+      # Posts.
+      @posts.sort((a, b) ->
+        return -(a["date"] - b["date"])
       )
-    return Promise.all(promiseQueue)
-
-  renderPages: () =>
-    promiseQueue = []
-    for data in @pages then do (data) =>
-      @logger.debug("Hikaru is rendering `#{data["srcPath"]}`...")
-      promiseQueue.push(data["content"] = @renderer.render(data["text"],
-      path.join(@themeDir, data["srcPath"])))
-    return Promise.all(promiseQueue)
-
-  renderSrcAssets: () =>
-    promiseQueue = []
-    for data in @srcAssets then do (data) =>
-      @logger.debug("Hikaru is rendering `#{data["srcPath"]}`...")
-      promiseQueue.push(data["content"] = @renderer.render(data["text"],
-      path.join(@themeDir, data["srcPath"])))
-    return Promise.all(promiseQueue)
+      generatedPosts = []
+      for post in @posts
+        p = @generator.generate(post, null, {
+          "Date": Date,
+          "__": @translator.__,
+          "_p": @translator._p,
+          "hello": () -> return "Hello"
+        })
+        if p not instanceof Array
+          generatedPosts.push(p)
+        else
+          generatedPosts = generatedPosts.concat(p)
+      @posts = generatedPosts
+      for i in [0...@posts.length]
+        if i > 0
+          @posts[i]["next"] = @posts[i - 1]
+        if i < @posts.length - 1
+          @posts[i]["prev"] = @posts[i + 1]
+      # Pages.
+      generatedPages = []
+      for page in @pages
+        p = @generator.generate(page, @posts, {
+          "Date": Date,
+          "__": @translator.__,
+          "_p": @translator._p,
+          "hello": () -> return "Hello"
+        })
+        if p not instanceof Array
+          generatedPages.push(p)
+        else
+          generatedPages = generatedPages.concat(p)
+      @pages = generatedPages
+      # Generate search index.
+      search = []
+      all = @pages.concat(@posts)
+      for p in all
+        search.push({
+          "title": p["title"],
+          "url": path.posix.join(path.posix.sep, p["docPath"]),
+          "content": p["text"]
+        })
+      @writeData(@srcPath, {
+        "srcPath": "search.json",
+        "docPath": "search.json",
+        "content": JSON.stringify(search)
+      })
+      for page in @pages
+        layout = page["layout"]
+        if layout not of @templates
+          layout = "page"
+        page["content"] = await @templates[layout](page)
+        @writeData(@srcDir, page)
+      # Merge post and template last.
+      for post in @posts
+        layout = post["layout"]
+        if layout not of @templates
+          layout = "page"
+        post["content"] = await @templates[layout](post)
+        @writeData(@srcDir, post)
+    )

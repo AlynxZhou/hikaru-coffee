@@ -8,11 +8,12 @@ class Generator
   register: (layout, fn) =>
     if layout instanceof Array
       for l in layout
-        @store[l] = fn
+        @store[l] = {"layout": l, "fn": fn}
       return
-    @store[layout] = fn
+    @store[layout] = {"layout": layout, "fn": fn}
 
   generate: (page, posts, ctx) =>
-    if page["layout"] of @store
-      return @store[page["layout"]](page, posts, ctx)
+    layout = page["layout"] or "page"
+    if layout of @store
+      return @store[layout]["fn"](page, posts, ctx)
     return page

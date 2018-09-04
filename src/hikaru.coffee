@@ -14,6 +14,7 @@ highlight = require("./highlight")
 Logger = require("./logger")
 Renderer = require("./renderer")
 Generator = require("./generator")
+Translator = require("./translator")
 Router = require("./router")
 
 module.exports =
@@ -21,31 +22,31 @@ class Hikaru
   constructor: (debug = false) ->
     @debug = debug
     @logger = new Logger(@debug)
-    @logger.info("Hikaru is starting...")
+    @logger.debug("Hikaru is starting...")
     process.on("exit", () =>
-      @logger.info("Hikaru is stopping...")
+      @logger.debug("Hikaru is stopping...")
     )
 
-  init: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
-    @logger.info("Hikaru started initialization in `#{workDir}`.")
+  init: (workDir = ".", configPath, srcDir, docDir, themeSrcDir) =>
+    @logger.debug("Hikaru started initialization in `#{workDir}`.")
     return fse.mkdirp(workDir).then(() =>
-      @logger.info("Hikaru created `#{workDir}/`.")
+      @logger.debug("Hikaru created `#{workDir}/`.")
       return fse.mkdirp(srcDir or path.join(workDir, "src"))
     ).then(() =>
-      @logger.info("Hikaru created `#{srcDir or path.join(workDir, "src")}/`.")
+      @logger.debug("Hikaru created `#{srcDir or path.join(workDir, "src")}/`.")
       return fse.copy(path.join(__dirname, "..", "dist", "config.yml"),
       configPath or path.join(workDir, "config.yml"))
     ).then(() =>
-      @logger.info("Hikaru copyed `#{configPath or
+      @logger.debug("Hikaru copyed `#{configPath or
       path.join(workDir, "config.yml")}`.")
       return fse.mkdirp(docDir or path.join(workDir, "doc"))
     ).then(() =>
-      @logger.info("Hikaru created `#{docDir or path.join(workDir, "doc")}/`.")
-      return fse.mkdirp(themeDir or path.join(workDir, "themes"))
+      @logger.debug("Hikaru created `#{docDir or path.join(workDir, "doc")}/`.")
+      return fse.mkdirp(themeSrcDir or path.join(workDir, "themes"))
     ).then(() =>
-      @logger.info("Hikaru created `#{themeDir or
+      @logger.debug("Hikaru created `#{themeSrcDir or
       path.join(workDir, "themes")}/`.")
-      @logger.info("Hikaru finished initialization in `#{workDir}`.")
+      @logger.debug("Hikaru finished initialization in `#{workDir}`.")
     ).catch(@logger.error)
 
   clean: (workDir = ".", configPath, docDir) =>
@@ -55,7 +56,7 @@ class Hikaru
     @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
     path.join(@workDir, "doc")
     fse.emptyDir(@docDir).then(() =>
-      @logger.info("Hikaru cleaned `#{@docDir}/`.")
+      @logger.debug("Hikaru cleaned `#{@docDir}/`.")
     ).catch(@logger.error)
 
   generate: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
@@ -67,11 +68,15 @@ class Hikaru
     @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
     path.join(@workDir, "doc")
     @themeDir = (if themeDir?
+    then themeDir
+    else path.join(@workDir, @siteConfig["themeDir"]) or
+    path.join(@workDir, "themes", "aria"))
+    @themeSrcDir = (if themeDir?
     then path.join(themeDir, "src")
     else path.join(@workDir, @siteConfig["themeDir"], "src") or
     path.join(@workDir, "themes", "aria", "src"))
     try
-      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
+      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeSrcDir,
       "config.yml")))
     catch err
       if err["code"] is "ENOENT"
@@ -79,19 +84,22 @@ class Hikaru
         @themeConfig = {}
     @renderer = new Renderer(@logger)
     @generator = new Generator(@logger)
-    @router = new Router(@logger, @renderer, @generator,
-    @srcDir, @docDir, @themeDir)
-    @registerInternalRoutes()
+    language = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
+    "languages", "#{@siteConfig["language"]}.yml")))
+    @translator = new Translator(language)
+    @router = new Router(@logger, @renderer, @generator, @translator,
+    @srcDir, @docDir, @themeSrcDir)
+    @registerInternalRenderers()
     @registerInternalGenerators()
     @router.route()
 
-  registerInternalRoutes: () =>
-    templateDir = @themeDir
+  registerInternalRenderers: () =>
+    templateDir = @themeSrcDir
     njkConfig = Object.assign({"autoescape": false}, @siteConfig["nunjucks"])
     njkEnv = nunjucks.configure(templateDir, njkConfig)
-    @router.register(".njk", (text, fullPath, ctx) ->
+    @renderer.register([".njk", ".j2"], null, (data, ctx) ->
       # For template you must give a render function.
-      template = nunjucks.compile(text, njkEnv, fullPath)
+      template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
       njkRender = (ctx) ->
         return new Promise((resolve, reject) ->
           template.render(ctx, (err, res) ->
@@ -107,12 +115,11 @@ class Hikaru
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = text.toLowerCase().replace(/[^\w]+/g, '-')
-      return """
-        <h#{level}>
-          <a class="headerlink" href="##{escaped}" title="##{escaped}"></a>
-          #{text}
-        </h#{level}>
-      """
+      return "<h#{level}>" +
+      "<a class=\"headerlink\" href=\"##{escaped}\" title=\"##{escaped}\">" +
+      "</a>" +
+      "#{text}" +
+      "</h#{level}>"
     marked.setOptions({
       "langPrefix": "",
       "highlight": (code, lang) ->
@@ -122,18 +129,23 @@ class Hikaru
           "gutter": markedConfig["gutter"] or true
         })
     })
-    @router.register(".md", ".html", (text, fullPath, ctx) ->
-      return marked(
-        text, Object.assign({
-          "renderer": renderer
-        }, markedConfig)
+    @renderer.register(".md", ".html", (data, ctx) ->
+      return new Promise((resolve, reject) ->
+        try
+          data["content"] = marked(
+            data["text"],
+            Object.assign({"renderer": renderer}, markedConfig)
+          )
+          return resolve(data)
+        catch err
+          return reject(err)
       )
     )
 
     stylConfig = @siteConfig.stylus or {}
-    @router.register(".styl", ".css", (text, fullPath, ctx) ->
+    @renderer.register(".styl", ".css", (data, ctx) ->
       return new Promise((resolve, reject) =>
-        stylus(text)
+        stylus(data["text"])
         .use(nib())
         .use((style) =>
           style.define("getSiteConfig", (data) =>
@@ -143,19 +155,20 @@ class Hikaru
           style.define("getThemeConfig", (data) =>
             return @themeConfig[data["val"]]
           )
-        ).set("filename", fullPath)
+        ).set("filename", data["srcPath"])
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
         .render((err, res) ->
           if err
             return reject(err)
-          return resolve(res)
+            data["content"] = res
+          return resolve(data)
         )
       )
     )
     # TODO: CoffeeScript render.
-    @router.register(".coffee", ".js", (text, fullPath, ctx) ->)
+    @renderer.register(".coffee", ".js", (data, ctx) ->)
 
   registerInternalGenerators: () =>
     @generator.register("index", (page, posts, ctx) =>
@@ -206,11 +219,9 @@ class Hikaru
       @siteConfig["perPage"]))
       for sub in category["subs"]
         results = results.concat(
-          paginateCategories(
-            sub, page, path.join(
-              parentPath, "#{category["name"]}"
-            ), ctx
-          )
+          paginateCategories(sub, page, path.join(
+            parentPath, "#{category["name"]}"
+          ), ctx)
         )
       return results
     @generator.register("categories", (page, posts, ctx) ->
@@ -240,7 +251,7 @@ class Hikaru
       for sub in categories
         results = results.concat(paginateCategories(sub, page,
         path.dirname(page["docPath"]), ctx))
-      results.push(Object.assign(ctx, page, {"posts": categories}))
+      results.push(Object.assign(page, ctx, {"posts": categories}))
       return results
     )
 
@@ -282,7 +293,7 @@ class Hikaru
         p["title"] = "#{tag["name"]}"
         results = results.concat(paginate(p, tag["posts"],
         ctx, @siteConfig["perPage"]))
-      results.push(Object.assign(ctx, page, {"posts": tags}))
+      results.push(Object.assign(page, ctx, {"posts": tags}))
       return results
     )
 
@@ -323,7 +334,7 @@ class Hikaru
           continue
         $(i).attr("src", path.posix.join(path.posix.sep,
         path.posix.dirname(page["docPath"]), src))
-      return Object.assign(ctx, page, {
+      return Object.assign(page, ctx, {
         "toc": toc,
         "content": $("body").html()
       })
@@ -336,10 +347,10 @@ paginate = (page, posts, ctx, perPage) ->
   perPagePosts = []
   for post in posts
     if perPagePosts.length is perPage
-      results.push(Object.assign(ctx, page, {"posts": perPagePosts}))
+      results.push(Object.assign(page, ctx, {"posts": perPagePosts}))
       perPagePosts = []
     perPagePosts.push(post)
-  results.push(Object.assign(ctx, page, {"posts": perPagePosts}))
+  results.push(Object.assign(page, ctx, {"posts": perPagePosts}))
   results[0]["pageArray"] = results
   results[0]["pageIndex"] = 1
   results[0]["docPath"] = page["docPath"]
