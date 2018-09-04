@@ -69,14 +69,14 @@ class Hikaru
     path.join(@workDir, "doc")
     @themeDir = (if themeDir?
     then themeDir
-    else path.join(@workDir, @siteConfig["themeDir"]) or
+    else path.join(@workDir, "themes", @siteConfig["themeDir"]) or
     path.join(@workDir, "themes", "aria"))
     @themeSrcDir = (if themeDir?
     then path.join(themeDir, "src")
-    else path.join(@workDir, @siteConfig["themeDir"], "src") or
+    else path.join(@workDir, "themes", @siteConfig["themeDir"], "src") or
     path.join(@workDir, "themes", "aria", "src"))
     try
-      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeSrcDir,
+      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
       "config.yml")))
     catch err
       if err["code"] is "ENOENT"
@@ -88,7 +88,7 @@ class Hikaru
     "languages", "#{@siteConfig["language"]}.yml")))
     @translator = new Translator(language)
     @router = new Router(@logger, @renderer, @generator, @translator,
-    @srcDir, @docDir, @themeSrcDir)
+    @srcDir, @docDir, @themeSrcDir, @siteConfig, @themeConfig)
     @registerInternalRenderers()
     @registerInternalGenerators()
     @router.route()
@@ -143,26 +143,38 @@ class Hikaru
     )
 
     stylConfig = @siteConfig.stylus or {}
-    @renderer.register(".styl", ".css", (data, ctx) ->
+    @renderer.register(".styl", ".css", (data, ctx) =>
       return new Promise((resolve, reject) =>
         stylus(data["text"])
         .use(nib())
         .use((style) =>
           style.define("getSiteConfig", (data) =>
-            return @siteConfig[data["val"]]
+            keys = data["val"].split(".")
+            res = @themeConfig
+            for k in keys
+              if k not of res
+                return null
+              res = res[k]
+            return res
           )
         ).use((style) =>
           style.define("getThemeConfig", (data) =>
-            return @themeConfig[data["val"]]
+            keys = data["val"].split(".")
+            res = @themeConfig
+            for k in keys
+              if k not of res
+                return null
+              res = res[k]
+            return res
           )
-        ).set("filename", data["srcPath"])
+        ).set("filename", path.join(@themeSrcDir, data["srcPath"]))
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
         .render((err, res) ->
           if err
             return reject(err)
-            data["content"] = res
+          data["content"] = res
           return resolve(data)
         )
       )
@@ -214,7 +226,9 @@ class Hikaru
       p = Object.assign({}, page)
       p["layout"] = "category"
       p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
-      p["title"] = "#{category["name"]}"
+      category["docPath"] = p["docPath"]
+      p["title"] = "category"
+      p["name"] = "#{category["name"]}"
       results = results.concat(paginate(p, category["posts"], ctx,
       @siteConfig["perPage"]))
       for sub in category["subs"]
@@ -229,19 +243,23 @@ class Hikaru
       for post in posts
         if not post["categories"]?
           continue
+        postCategories = []
         subCategories = categories
         for cateName in post["categories"]
           found = false
           for category in subCategories
             if category["name"] is cateName
               found = true
+              postCategories.push(category)
               category["posts"].push(post)
               subCategories = category["subs"]
               break
           if not found
             newCate = {"name": cateName, "posts": [post], "subs": []}
+            postCategories.push(newCate)
             subCategories.push(newCate)
             subCategories = newCate["subs"]
+        post["categories"] = postCategories
       categories.sort((a, b) ->
         return a["name"].localeCompare(b["name"])
       )
@@ -251,7 +269,7 @@ class Hikaru
       for sub in categories
         results = results.concat(paginateCategories(sub, page,
         path.dirname(page["docPath"]), ctx))
-      results.push(Object.assign(page, ctx, {"posts": categories}))
+      results.push(Object.assign(page, ctx, {"categories": categories}))
       return results
     )
 
@@ -268,15 +286,20 @@ class Hikaru
       for post in posts
         if not post["tags"]?
           continue
+        postTags = []
         for tagName in post["tags"]
           found = false
           for tag in tags
             if tag["name"] is tagName
               found = true
+              postTags.push(tag)
               tag["posts"].push(post)
               break
           if not found
-            tags.push({"name": tagName, "posts": [post]})
+            newTag = {"name": tagName, "posts": [post]}
+            postTags.push(newTag)
+            tags.push(newTag)
+        post["tags"] = postTags
       tags.sort((a, b) ->
         return a["name"].localeCompare(b["name"])
       )
@@ -290,10 +313,12 @@ class Hikaru
         p["layout"] = "tag"
         p["docPath"] = path.join(path.dirname(page["docPath"]),
         "#{tag["name"]}", "index.html")
+        tag["docPath"] = p["docPath"]
+        p["title"] = "tag"
         p["title"] = "#{tag["name"]}"
         results = results.concat(paginate(p, tag["posts"],
         ctx, @siteConfig["perPage"]))
-      results.push(Object.assign(page, ctx, {"posts": tags}))
+      results.push(Object.assign(page, ctx, {"tags": tags}))
       return results
     )
 

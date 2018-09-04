@@ -6,7 +6,7 @@ glob = require("glob")
 module.exports =
 class Router
   constructor: (logger, renderer, generator, translator,
-  srcDir, docDir, themeSrcDir) ->
+  srcDir, docDir, themeSrcDir, siteConfig, themeConfig) ->
     @logger = logger
     @renderer = renderer
     @generator = generator
@@ -14,6 +14,8 @@ class Router
     @srcDir = srcDir
     @docDir = docDir
     @themeSrcDir = themeSrcDir
+    @siteConfig = siteConfig
+    @themeConfig = themeConfig
     @templates = {}
     @pages = []
     @posts = []
@@ -111,6 +113,8 @@ class Router
       generatedPosts = []
       for post in @posts
         p = @generator.generate(post, null, {
+          "siteConfig": @siteConfig,
+          "themeConfig": @themeConfig,
           "Date": Date,
           "__": @translator.__,
           "_p": @translator._p,
@@ -130,6 +134,8 @@ class Router
       generatedPages = []
       for page in @pages
         p = @generator.generate(page, @posts, {
+          "siteConfig": @siteConfig,
+          "themeConfig": @themeConfig,
           "Date": Date,
           "__": @translator.__,
           "_p": @translator._p,
