@@ -2,6 +2,7 @@ fse = require("fs-extra")
 path = require("path")
 
 cheerio = require("cheerio")
+moment = require("moment")
 
 yaml = require("js-yaml")
 nunjucks = require("nunjucks")
@@ -99,6 +100,7 @@ class Hikaru
     @srcDir, @docDir, @themeSrcDir, @siteConfig, @themeConfig)
     @registerInternalRenderers()
     @registerInternalGenerators()
+    @registerInternalRoutes()
     @router.route()
 
   registerInternalRenderers: () =>
@@ -202,90 +204,20 @@ class Hikaru
       return paginate(page, posts, ctx, @siteConfig["perPage"])
     )
 
-    ###
-    [
-      {
-        "name"：String,
-        "posts": [Post],
-        "subs": [
-          {
-            "name": String,
-            "posts": [Post],
-            "subs": []
-          }
-        ]
-      }
-    ]
-    ###
     @generator.register("categories", (page, posts, ctx) =>
-      categories = []
-      for post in posts
-        if not post["categories"]?
-          continue
-        postCategories = []
-        subCategories = categories
-        for cateName in post["categories"]
-          found = false
-          for category in subCategories
-            if category["name"] is cateName
-              found = true
-              postCategories.push(category)
-              category["posts"].push(post)
-              subCategories = category["subs"]
-              break
-          if not found
-            newCate = {"name": cateName, "posts": [post], "subs": []}
-            postCategories.push(newCate)
-            subCategories.push(newCate)
-            subCategories = newCate["subs"]
-        post["categories"] = postCategories
-      categories.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      for sub in categories
-        sortCategories(sub)
       results = []
-      for sub in categories
+      for sub in ctx["site"]["categories"]
         results = results.concat(paginateCategories(sub, page,
         path.dirname(page["docPath"]), @siteConfig["perPage"], ctx))
-      results.push(Object.assign({}, page, ctx, {"categories": categories}))
+      results.push(Object.assign({}, page, ctx, {
+        "categories": ctx["site"]["categories"]
+      }))
       return results
     )
 
-    ###
-    [
-      {
-        "name": String,
-        "posts": [Post]
-      }
-    ]
-    ###
     @generator.register("tags", (page, posts, ctx) =>
-      tags = []
-      for post in posts
-        if not post["tags"]?
-          continue
-        postTags = []
-        for tagName in post["tags"]
-          found = false
-          for tag in tags
-            if tag["name"] is tagName
-              found = true
-              postTags.push(tag)
-              tag["posts"].push(post)
-              break
-          if not found
-            newTag = {"name": tagName, "posts": [post]}
-            postTags.push(newTag)
-            tags.push(newTag)
-        post["tags"] = postTags
-      tags.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      for tag in tags
-        tag["posts"].sort(dateStrCompare)
       results = []
-      for tag in tags
+      for tag in ctx["site"]["tags"]
         p = Object.assign({}, page)
         p["layout"] = "tag"
         p["docPath"] = path.join(path.dirname(page["docPath"]),
@@ -295,7 +227,9 @@ class Hikaru
         p["name"] = tag["name"]
         results = results.concat(paginate(p, tag["posts"],
         ctx, @siteConfig["perPage"]))
-      results.push(Object.assign({}, page, ctx, {"tags": tags}))
+      results.push(Object.assign({}, page, ctx, {
+        "tags": ctx["site"]["tags"]
+      }))
       return results
     )
 
@@ -342,4 +276,140 @@ class Hikaru
         page["excerpt"] = split[0]
         page["more"] = split[1]
       return Object.assign({}, page, ctx, {"toc": toc})
+    )
+
+  registerInternalRoutes: () =>
+    @router.register((site) ->
+      # Generate categories
+      ###
+      [
+        {
+          "name"：String,
+          "posts": [Post],
+          "subs": [
+            {
+              "name": String,
+              "posts": [Post],
+              "subs": []
+            }
+          ]
+        }
+      ]
+      ###
+      categories = []
+      categoriesLength = 0
+      for post in site["posts"]
+        if not post["categories"]?
+          continue
+        postCategories = []
+        subCategories = categories
+        for cateName in post["categories"]
+          found = false
+          for category in subCategories
+            if category["name"] is cateName
+              found = true
+              postCategories.push(category)
+              category["posts"].push(post)
+              subCategories = category["subs"]
+              break
+          if not found
+            newCate = {"name": cateName, "posts": [post], "subs": []}
+            ++categoriesLength
+            postCategories.push(newCate)
+            subCategories.push(newCate)
+            subCategories = newCate["subs"]
+        post["categories"] = postCategories
+      categories.sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for sub in categories
+        sortCategories(sub)
+      site["categories"] = categories
+      site["categoriesLength"] = categoriesLength
+      return site
+    )
+
+    @router.register((site) ->
+      # Generate tags.
+      ###
+      [
+        {
+          "name": String,
+          "posts": [Post]
+        }
+      ]
+      ###
+      tags = []
+      tagsLength = 0
+      for post in site["posts"]
+        if not post["tags"]?
+          continue
+        postTags = []
+        for tagName in post["tags"]
+          found = false
+          for tag in tags
+            if tag["name"] is tagName
+              found = true
+              postTags.push(tag)
+              tag["posts"].push(post)
+              break
+          if not found
+            newTag = {"name": tagName, "posts": [post]}
+            ++tagsLength
+            postTags.push(newTag)
+            tags.push(newTag)
+        post["tags"] = postTags
+      tags.sort((a, b) ->
+        return a["name"].localeCompare(b["name"])
+      )
+      for tag in tags
+        tag["posts"].sort(dateStrCompare)
+      site["tags"] = tags
+      site["tagsLength"] = tagsLength
+      return site
+    )
+
+    @router.register((site) ->
+      if not site["siteConfig"]["search"]["enable"]
+        return site
+      # Generate search index.
+      search = []
+      all = site["pages"].concat(site["posts"])
+      for p in all
+        search.push({
+          "title": p["title"],
+          "url": path.posix.join(site["siteConfig"]["rootDir"], p["docPath"]),
+          "content": p["text"]
+        })
+      site["data"].push({
+        "srcPath": site["siteConfig"]["search"]["path"] or "search.json",
+        "docPath": site["siteConfig"]["search"]["path"] or "search.json",
+        "content": JSON.stringify(search)
+      })
+      return site
+    )
+
+    @router.register((site) ->
+      if not site["siteConfig"]["feed"]["enable"]
+        return site
+      # Generate RSS feed.
+      tmpContent = fse.readFileSync(path.join(
+        __dirname, "..", "dist", "atom.njk"
+      ), "utf8")
+      content = nunjucks.renderString(tmpContent, {
+        "site": site,
+        "siteConfig": site["siteConfig"],
+        "themeConfig": site["themeConfig"],
+        "posts": site["posts"],
+        "moment": moment,
+        "pathPx": path.posix,
+        "encodeURI": encodeURI,
+        "encodeURIComponent": encodeURIComponent
+      })
+      site["data"].push({
+        "srcPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
+        "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
+        "content": content
+      })
+      return site
     )

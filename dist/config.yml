@@ -2,11 +2,11 @@ title: Hikaru Site
 subtitle:
 description:
 author: Hikaru
+email:
 language: default
-# timezone: Asia/Shanghai
 
 # rootDir must start with `/` while url shouldn't end with `/`.
-url: https://sh.alynx.xyz
+url: https://yourdomain.com
 rootDir: /
 
 perPage: 10

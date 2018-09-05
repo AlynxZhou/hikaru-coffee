@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ siteConfig.title }}</title>
+  {% if themeConfig.avatar %}<icon>{{ pathPx.join(siteConfig.rootDir, themeConfig.avatar) }}</icon>{% endif %}
+  {% if siteConfig.subtitle %}<subtitle>{{ siteConfig.subtitle }}</subtitle>{% endif %}
+  <link href="{{ pathPx.join(siteConfig.rootDir, siteConfig.feed.path or "atom.xml") }}" rel="self" />
+  {% if siteConfig.feed.hub %}<link href="{{ encodeURI(siteConfig.feed.hub) }}" rel="hub"/>{% endif %}
+  <link href="{{ encodeURI(url) }}" />
+  <updated>{{ moment(posts[0].date) }}</updated>
+  <id>{{ url + "/" }}</id>
+  {% if siteConfig.author %}
+  <author>
+    <name>{{ siteConfig.author }}</name>
+    {% if siteConfig.email %}<email>{{ siteConfig.email }}</email>{% endif %}
+  </author>
+  {% endif %}
+  <generator uri="https://github.com/AlynxZhou/hikaru/">Hikaru</generator>
+  {% for post in posts.slice(0, siteConfig.feed.limit) %}
+  <entry>
+    <title>{{ post.title }}</title>
+    <link href="{{ pathPx.join(siteConfig.rootDir, post.docPath) }}" />
+    <id>{{ url + pathPx.join(siteConfig.rootDir, post.docPath) }}</id>
+    <published>{{ moment(post.date) }}</published>
+    <updated>{{ moment(post.date) }}</updated>
+    {% if siteConfig.feed.content and post.content %}
+    <content type="html"><![CDATA[{{ post.content | safe }}]]></content>
+    {% endif %}
+    <summary type="html">
+    {% if post.excerpt %}
+    {{ post.excerpt }}
+    {% elif post.description %}
+    {{ post.description }}
+    {% elif post.content %}
+    {{ post.content.substring(0, siteConfig.feed.contentLimit) }}
+    {% endif %}
+    </summary>
+    {% for category in post.categories %}
+    <category term="{{ category.name }}" />
+    {% endfor %}
+    {% for tag in post.tags %}
+    <category term="{{ tag.name }}" />
+    {% endfor %}
+  </entry>
+  {% endfor %}
+</feed>

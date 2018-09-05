@@ -10,9 +10,11 @@ class Renderer
   register: (srcExt, docExt, fn) =>
     if srcExt instanceof Array
       for s in srcExt
-        @store[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
+        if fn instanceof Function
+          @store[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
       return
-    @store[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
+    if fn instanceof Function
+      @store[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
 
   render: (data, ctx) =>
     srcExt = path.extname(data["srcPath"])

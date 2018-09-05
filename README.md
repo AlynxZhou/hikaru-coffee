@@ -9,9 +9,11 @@ A static site generator that generates routes based on directories naturally.
 # Refactor
 
 Router:
+
     - Load each post then compile template and cache and render then call generator then save.
     - Load each asset then render then save.
     - Load each page then compile template and cache and render then call generator then save.
+    - Make custom site variables before pages and posts are generated.
 
 Renderer: Register srcExt, docExt and fn, render data and return a promise of data.
 
@@ -35,7 +37,7 @@ Generator: Receive page(data), posts and ctx then return a promise of data.
 - [X] sprintf-js based multi-languages support.
 - [X] Local search JSON gengrating.
 - [ ] RSS feed generating.
-- [ ] Porting theme ARIA (Need to fix marked automatically added `<pre><code></pre></code>`).
+- [X] Porting theme ARIA.
 - [ ] File watch and live reload server.
 
 # Dir Structure

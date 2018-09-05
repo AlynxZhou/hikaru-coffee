@@ -16,11 +16,20 @@ class Router
     @srcDir = srcDir
     @docDir = docDir
     @themeSrcDir = themeSrcDir
-    @siteConfig = siteConfig
-    @themeConfig = themeConfig
-    @templates = {}
-    @pages = []
-    @posts = []
+    @store = []
+    @site = {
+      "siteConfig": siteConfig,
+      "themeConfig": themeConfig,
+      "templates": {},
+      "pages": [],
+      "posts": [],
+      "data": []
+    }
+
+  # fn: param site, change site.
+  register: (fn) =>
+    if fn instanceof Function
+      @store.push(fn)
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -70,7 +79,7 @@ class Router
     return @matchFiles("*.*", {"cwd": @themeSrcDir}).then((templates) =>
       return Promise.all(templates.map((srcPath) =>
         return @readData(@themeSrcDir, srcPath).then((data) =>
-          @templates[path.basename(srcPath,
+          @site["templates"][path.basename(srcPath,
           path.extname(srcPath))] = @renderer.render(data, null)
         )
       ))
@@ -104,18 +113,24 @@ class Router
         if not p?
           continue
         if p["layout"] is "post"
-          @posts.push(p)
+          @site["posts"].push(p)
         else
-          @pages.push(p)
+          @site["pages"].push(p)
       # Posts.
-      @posts.sort(dateStrCompare)
+      @site["posts"].sort(dateStrCompare)
+      # Custum route.
+      for fn in @store
+        @site = fn(@site)
       generatedPosts = []
-      for post in @posts
+      for post in @site["posts"]
         p = @generator.generate(post, null, {
-          "siteConfig": @siteConfig,
-          "themeConfig": @themeConfig,
+          "site": @site,
+          "siteConfig": @site["siteConfig"],
+          "themeConfig": @site["themeConfig"],
           "moment": moment,
-          "pathPos": path.posix,
+          "pathPx": path.posix,
+          "encodeURI": encodeURI,
+          "encodeURIComponent": encodeURIComponent,
           "__": @translator.__,
           "_p": @translator._p
         })
@@ -123,22 +138,25 @@ class Router
           generatedPosts.push(p)
         else
           generatedPosts = generatedPosts.concat(p)
-      @posts = generatedPosts
-      for i in [0...@posts.length]
+      @site["posts"] = generatedPosts
+      for i in [0...@site["posts"].length]
         if i > 0
-          @posts[i]["next"] = @posts[i - 1]
-        if i < @posts.length - 1
-          @posts[i]["prev"] = @posts[i + 1]
+          @site["posts"][i]["next"] = @site["posts"][i - 1]
+        if i < @site["posts"].length - 1
+          @site["posts"][i]["prev"] = @site["posts"][i + 1]
       # Pages.
       generatedPages = []
-      for page in @pages
-        if page["layout"] not of @templates
+      for page in @site["pages"]
+        if page["layout"] not of @site["templates"]
           page["layout"] = "page"
-        p = @generator.generate(page, @posts, {
-          "siteConfig": @siteConfig,
-          "themeConfig": @themeConfig,
+        p = @generator.generate(page, @site["posts"], {
+          "site", @site,
+          "siteConfig": @site["siteConfig"],
+          "themeConfig": @site["themeConfig"],
           "moment": moment,
-          "pathPos": path.posix,
+          "pathPx": path.posix,
+          "encodeURI": encodeURI,
+          "encodeURIComponent": encodeURIComponent,
           "__": @translator.__,
           "_p": @translator._p
         })
@@ -146,26 +164,14 @@ class Router
           generatedPages.push(p)
         else
           generatedPages = generatedPages.concat(p)
-      @pages = generatedPages
-      # Generate search index.
-      search = []
-      all = @pages.concat(@posts)
-      for p in all
-        search.push({
-          "title": p["title"],
-          "url": path.posix.join(@siteConfig["rootDir"], p["docPath"]),
-          "content": p["text"]
-        })
-      @writeData(@srcPath, {
-        "srcPath": "search.json",
-        "docPath": "search.json",
-        "content": JSON.stringify(search)
-      })
-      for page in @pages
-        page["content"] = await @templates[page["layout"]](page)
+      @site["pages"] = generatedPages
+      for data in @site["data"]
+        @writeData(@srcDir, data)
+      for page in @site["pages"]
+        page["content"] = await @site["templates"][page["layout"]](page)
         @writeData(@srcDir, page)
       # Merge post and template last.
-      for post in @posts
-        post["content"] = await @templates[post["layout"]](post)
+      for post in @site["posts"]
+        post["content"] = await @site["templates"][post["layout"]](post)
         @writeData(@srcDir, post)
     )
