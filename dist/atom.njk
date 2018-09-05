@@ -23,7 +23,7 @@
     <published>{{ moment(post.date).format() }}</published>
     <updated>{{ moment(post.date).format() }}</updated>
     {% if siteConfig.feed.content and post.content %}
-    <content type="html"><![CDATA[{{ post.content | safe }}]]></content>
+    <content type="html"><![CDATA[{{ post.content | escape }}]]></content>
     {% endif %}
     <summary type="html">
     {% if post.excerpt %}
@@ -31,7 +31,7 @@
     {% elif post.description %}
     {{ post.description }}
     {% elif post.content %}
-    {{ post.text.substring(0, siteConfig.feed.contentLimit) | safe }}
+    {{ post.text.substring(0, siteConfig.feed.contentLimit) | escape }}
     {% endif %}
     </summary>
     {% for category in post.categories %}

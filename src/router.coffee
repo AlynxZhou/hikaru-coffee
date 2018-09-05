@@ -102,6 +102,7 @@ class Router
             parsed = fm(data["raw"])
             data["text"] = parsed["body"]
             data = Object.assign({}, data, parsed["attributes"])
+            data["title"] = data["title"].toString()
             if data["text"] isnt data["raw"]
               return @renderer.render(data, null)
           @renderer.render(data, null).then((data) =>

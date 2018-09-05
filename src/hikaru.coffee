@@ -224,7 +224,7 @@ class Hikaru
         "#{tag["name"]}", "index.html")
         tag["docPath"] = p["docPath"]
         p["title"] = "tag"
-        p["name"] = tag["name"]
+        p["name"] = tag["name"].toString()
         results = results.concat(paginate(p, tag["posts"],
         ctx, @siteConfig["perPage"]))
       results.push(Object.assign({}, page, ctx, {
@@ -377,7 +377,7 @@ class Hikaru
       all = site["pages"].concat(site["posts"])
       for p in all
         search.push({
-          "title": p["title"],
+          "title": p["title"].toString(),
           "url": path.posix.join(site["siteConfig"]["rootDir"], p["docPath"]),
           "content": p["text"]
         })

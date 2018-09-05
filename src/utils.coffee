@@ -47,7 +47,7 @@ paginateCategories = (category, page, parentPath, perPage, ctx) ->
   p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
   category["docPath"] = p["docPath"]
   p["title"] = "category"
-  p["name"] = category["name"]
+  p["name"] = category["name"].toString()
   results = results.concat(paginate(p, category["posts"], ctx, perPage))
   for sub in category["subs"]
     results = results.concat(
