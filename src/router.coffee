@@ -61,8 +61,10 @@ class Router
     )
 
   routeThemeAssets: () =>
-    @matchFiles(path.join("**", "*.*"),
-    {"cwd": @themeSrcDir}).then((themeSrcs) =>
+    @matchFiles(path.join("**", "*"), {
+      "nodir": true,
+      "cwd": @themeSrcDir
+    }).then((themeSrcs) =>
       themeSrcs.filter((srcPath) ->
         # Asset is in sub dir.
         return path.dirname(srcPath) isnt "."
@@ -76,7 +78,10 @@ class Router
     )
 
   routeTemplates: () =>
-    return @matchFiles("*.*", {"cwd": @themeSrcDir}).then((templates) =>
+    return @matchFiles("*", {
+      "nodir": true,
+      "cwd": @themeSrcDir
+    }).then((templates) =>
       return Promise.all(templates.map((srcPath) =>
         return @readData(@themeSrcDir, srcPath).then((data) =>
           @site["templates"][path.basename(srcPath,
@@ -86,7 +91,10 @@ class Router
     )
 
   routeSrcs: () =>
-    return @matchFiles(path.join("**", "*.*"), {"cwd": @srcDir}).then((srcs) =>
+    return @matchFiles(path.join("**", "*"), {
+      "nodir": true,
+      "cwd": @srcDir
+    }).then((srcs) =>
       renderedPromises = []
       for srcPath in srcs then do (srcPath) =>
         renderedPromises.push(@readData(@srcDir, srcPath).then((data) =>
