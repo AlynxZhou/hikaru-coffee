@@ -5,9 +5,9 @@
   {% if siteConfig.subtitle %}<subtitle>{{ siteConfig.subtitle }}</subtitle>{% endif %}
   <link href="{{ pathPx.join(siteConfig.rootDir, siteConfig.feed.path or "atom.xml") }}" rel="self" />
   {% if siteConfig.feed.hub %}<link href="{{ encodeURI(siteConfig.feed.hub) }}" rel="hub"/>{% endif %}
-  <link href="{{ encodeURI(url) }}" />
-  <updated>{{ moment(posts[0].date) }}</updated>
-  <id>{{ url + "/" }}</id>
+  <link href="{{ encodeURI(siteConfig.url) }}" />
+  <updated>{{ moment(posts[0].date).format() }}</updated>
+  <id>{{ siteConfig.url + "/" }}</id>
   {% if siteConfig.author %}
   <author>
     <name>{{ siteConfig.author }}</name>
@@ -19,9 +19,9 @@
   <entry>
     <title>{{ post.title }}</title>
     <link href="{{ pathPx.join(siteConfig.rootDir, post.docPath) }}" />
-    <id>{{ url + pathPx.join(siteConfig.rootDir, post.docPath) }}</id>
-    <published>{{ moment(post.date) }}</published>
-    <updated>{{ moment(post.date) }}</updated>
+    <id>{{ siteConfig.url + pathPx.join(siteConfig.rootDir, post.docPath) }}</id>
+    <published>{{ moment(post.date).format() }}</published>
+    <updated>{{ moment(post.date).format() }}</updated>
     {% if siteConfig.feed.content and post.content %}
     <content type="html"><![CDATA[{{ post.content | safe }}]]></content>
     {% endif %}
