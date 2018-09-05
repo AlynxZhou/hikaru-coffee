@@ -4,13 +4,17 @@ Hikaru
 A static site generator that generates routes based on directories naturally.
 -----------------------------------------------------------------------------
 
+- "This world won't need one more static site generator!"
+
+- "But I need."
+
+# Install
+
 ```
 # npm i -g hikaru-coffee
 ```
 
-# NOT FINISHED YET, JUST IMPLEMENTED VERY SIMPLE FUNCTIONS.
-
-# Refactor
+# Code Structure
 
 Router:
 
@@ -23,7 +27,7 @@ Renderer: Register srcExt, docExt and fn, render data and return a promise of da
 
 Generator: Receive page(data), posts and ctx then return a promise of data.
 
-# List
+# TODO List
 
 - [X] Dir based router.
 - [X] Marked Markdown renderer.
@@ -42,7 +46,7 @@ Generator: Receive page(data), posts and ctx then return a promise of data.
 - [X] Local search JSON gengrating.
 - [X] RSS feed generating.
 - [X] Porting theme ARIA.
-- [ ] File watch and live reload server.
+- [ ] File watch and live reload server. (No idea and hard to implement, may not add).
 
 # Dir Structure
 
