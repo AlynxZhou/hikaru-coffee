@@ -377,7 +377,7 @@ class Hikaru
       all = site["pages"].concat(site["posts"])
       for p in all
         search.push({
-          "title": p["title"].toString(),
+          "title": "#{p["title"]}",
           "url": path.posix.join(site["siteConfig"]["rootDir"], p["docPath"]),
           "content": p["text"]
         })

@@ -63,6 +63,7 @@ class Router
   routeThemeAssets: () =>
     @matchFiles(path.join("**", "*"), {
       "nodir": true,
+      "dot": true,
       "cwd": @themeSrcDir
     }).then((themeSrcs) =>
       themeSrcs.filter((srcPath) ->
@@ -80,6 +81,7 @@ class Router
   routeTemplates: () =>
     return @matchFiles("*", {
       "nodir": true,
+      "dot": true,
       "cwd": @themeSrcDir
     }).then((templates) =>
       return Promise.all(templates.map((srcPath) =>
@@ -93,6 +95,7 @@ class Router
   routeSrcs: () =>
     return @matchFiles(path.join("**", "*"), {
       "nodir": true,
+      "dot": true,
       "cwd": @srcDir
     }).then((srcs) =>
       renderedPromises = []
@@ -102,8 +105,9 @@ class Router
             parsed = fm(data["raw"])
             data["text"] = parsed["body"]
             data = Object.assign({}, data, parsed["attributes"])
-            data["title"] = data["title"].toString()
             if data["text"] isnt data["raw"]
+              if data["title"]?
+                data["title"] = data["title"].toString()
               return @renderer.render(data, null)
           @renderer.render(data, null).then((data) =>
             @writeData(@srcDir, data)
