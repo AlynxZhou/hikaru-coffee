@@ -31,7 +31,7 @@
     {% elif post.description %}
     {{ post.description }}
     {% elif post.content %}
-    {{ post.content.substring(0, siteConfig.feed.contentLimit) }}
+    {{ post.text.substring(0, siteConfig.feed.contentLimit) | safe }}
     {% endif %}
     </summary>
     {% for category in post.categories %}
