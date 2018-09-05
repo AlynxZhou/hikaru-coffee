@@ -4,6 +4,10 @@ Hikaru
 A static site generator that generates routes based on directories naturally.
 -----------------------------------------------------------------------------
 
+```
+# npm i -g hikaru-coffee
+```
+
 # NOT FINISHED YET, JUST IMPLEMENTED VERY SIMPLE FUNCTIONS.
 
 # Refactor
