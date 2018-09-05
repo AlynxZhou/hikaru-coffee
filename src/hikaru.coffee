@@ -126,8 +126,8 @@ class Hikaru
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = escapeHTML(text)
-      return "<h#{level} id=\"h#{level}-#{escaped}\">" +
-      "<a class=\"headerlink\" href=\"##{escaped}\" title=\"##{escaped}\">" +
+      return "<h#{level} id=\"#{escaped}\">" +
+      "<a class=\"headerlink\" href=\"##{escaped}\" title=\"#{escaped}\">" +
       "</a>" +
       "#{text}" +
       "</h#{level}>"
