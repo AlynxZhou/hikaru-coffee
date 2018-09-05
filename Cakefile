@@ -1,11 +1,11 @@
 {exec} = require("child_process")
 
 task("build", "Build project from *.coffee to *.js.", () ->
-  exec("coffee --compile --output index.js index.coffee",
+  exec("coffee --compile --bare --output index.js index.coffee",
   (err, stdout, stderr) ->
     if err
       throw err
-    console.log("coffee --compile --output index.js index.coffee")
+    console.log("coffee --compile --bare --output index.js index.coffee")
     if stdout or stderr
       console.log(stdout + stderr)
   )
@@ -19,11 +19,12 @@ task("build", "Build project from *.coffee to *.js.", () ->
 )
 
 task("watch", "Watch project from src/*.coffee to lib/*.js.", () ->
-  exec("coffee --compile --watch --output index.js index.coffee",
+  exec("coffee --compile --bare --watch --output index.js index.coffee",
   (err, stdout, stderr) ->
     if err
       throw err
-    console.log("coffee --compile --watch --output index.js index.coffee")
+    console.log("coffee --compile --bare --watch --output" +
+    " index.js index.coffee")
     if stdout or stderr
       console.log(stdout + stderr)
   )

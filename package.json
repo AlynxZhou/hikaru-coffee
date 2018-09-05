@@ -1,10 +1,10 @@
 {
   "name": "hikaru-coffee",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A static site generator that generates routes based on directories naturally.",
-  "main": "index.js",
+  "main": "lib/index.js",
   "bin": {
-    "hikaru": "lib/index.js"
+    "hikaru": "bin/hikaru"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
