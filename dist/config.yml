@@ -15,6 +15,9 @@ srcDir: src
 docDir: doc
 themeDir: aria
 
+skipRender:
+  - README.md
+
 marked:
   gutter: true
   hljs: true

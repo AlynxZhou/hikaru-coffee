@@ -91,7 +91,7 @@ class Hikaru
       if err["code"] is "ENOENT"
         @logger.info("Hikaru continues with a empty theme config...")
         @themeConfig = {}
-    @renderer = new Renderer(@logger)
+    @renderer = new Renderer(@logger, @siteConfig["skipRender"])
     @generator = new Generator(@logger)
     language = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
     "languages", "#{@siteConfig["language"]}.yml")))

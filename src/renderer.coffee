@@ -2,9 +2,10 @@ path = require("path")
 
 module.exports =
 class Renderer
-  constructor: (logger) ->
+  constructor: (logger, skipRenderList) ->
     @logger = logger
     @store = {}
+    @skipRenderList = skipRenderList or []
 
   # fn: param data, ctx, return Promise
   register: (srcExt, docExt, fn) =>
@@ -18,7 +19,7 @@ class Renderer
 
   render: (data, ctx) =>
     srcExt = path.extname(data["srcPath"])
-    if srcExt of @store
+    if srcExt of @store and data["srcPath"] not in @skipRenderList
       docExt = @store[srcExt]["docExt"]
       if docExt?
         dirname = path.dirname(data["srcPath"])
