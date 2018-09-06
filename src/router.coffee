@@ -104,9 +104,7 @@ class Router
       "cwd": @site["srcDir"]
     }).then((srcs) =>
       return Promise.all(srcs.map((srcPath) =>
-        @readData(
-          @site["srcDir"], srcPath
-        ).then((data) =>
+        @readData(@site["srcDir"], srcPath).then((data) =>
           if typeof(data["raw"]) is "string"
             parsed = fm(data["raw"])
             data["text"] = parsed["body"]
@@ -182,7 +180,7 @@ class Router
     generated = []
     for p in @site["posts"]
       p = @generateData(p)
-      generated.concat(p)
+      generated = generated.concat(p)
     @site["posts"] = generated
     for i in [0...@site["posts"].length]
       if i > 0
@@ -194,17 +192,17 @@ class Router
     generated = []
     for p in @site["pages"]
       p = @generateData(p)
-      generated.concat(p)
+      generated = generated.concat(p)
     @site["pages"] = generated
 
   saveAssets: () =>
-    @site["assets"].map((asset) =>
+    return @site["assets"].map((asset) =>
       @writeData(asset["srcDir"], asset)
       return asset
     )
 
   savePosts: () =>
-    @site["posts"].map((post) =>
+    return @site["posts"].map((post) =>
       @site["templates"][post["layout"]]["content"](post).then((content) =>
         post["content"] = content
         return @writeData(@site["srcDir"], post)
@@ -213,7 +211,7 @@ class Router
     )
 
   savePages: () =>
-    @site["pages"].map((page) =>
+    return @site["pages"].map((page) =>
       @site["templates"][page["layout"]]["content"](page).then((content) =>
         page["content"] = content
         return @writeData(@site["srcDir"], page)
@@ -222,13 +220,13 @@ class Router
     )
 
   saveData: () =>
-    @site["data"].map((data) =>
+    return @site["data"].map((data) =>
       @writeData(null, data)
       return data
     )
 
   route: () =>
-    Promise.all([
+    return Promise.all([
       @loadThemeAssets(),
       @loadTemplates().then(() =>
         @loadSrcs()
@@ -238,8 +236,8 @@ class Router
       )
       return Promise.all([
         @renderTemplates(),
-        @renderPosts(),
-        @renderPages()
+        @renderPages(),
+        @renderPosts()
       ])
     ).then(() =>
       for fn in @store["beforeGenerating"]
