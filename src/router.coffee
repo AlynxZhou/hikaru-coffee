@@ -5,7 +5,6 @@ yaml = require("js-yaml")
 glob = require("glob")
 moment = require("moment")
 
-Translator = require("./translator")
 {
   dateStrCompare,
   getAbsPathFn,
@@ -47,6 +46,7 @@ class Router
     return fse.readFile(path.join(srcDir, srcPath), "utf8").then((raw) ->
       return {
         "srcPath": srcPath,
+        "srcDir": srcDir,
         "text": raw,
         "raw": raw
       }
@@ -65,25 +65,23 @@ class Router
       path.join(@site["docDir"], data["docPath"])
     )
 
-  routeThemeAssets: () =>
+  loadThemeAssets: () =>
     @matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site["themeSrcDir"]
     }).then((themeSrcs) =>
-      themeSrcs.filter((srcPath) ->
+      return Promise.all(themeSrcs.filter((srcPath) ->
         # Asset is in sub dir.
         return path.dirname(srcPath) isnt "."
       ).map((srcPath) =>
         return @readData(@site["themeSrcDir"], srcPath).then((data) =>
-          return @renderer.render(data, null)
-        ).then((data) =>
-          return @writeData(@site["themeSrcDir"], data)
+          @site["assets"].push(data)
         )
-      )
+      ))
     )
 
-  routeTemplates: () =>
+  loadTemplates: () =>
     return @matchFiles("*", {
       "nodir": true,
       "dot": true,
@@ -91,22 +89,22 @@ class Router
     }).then((templates) =>
       return Promise.all(templates.map((srcPath) =>
         return @readData(@site["themeSrcDir"], srcPath).then((data) =>
-          @site["templates"][path.basename(
+          data["key"] = path.basename(
             srcPath, path.extname(srcPath)
-          )] = @renderer.render(data, null)
+          )
+          @site["templates"][data["key"]] = data
         )
       ))
     )
 
-  routeSrcs: () =>
+  loadSrcs: () =>
     return @matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site["srcDir"]
     }).then((srcs) =>
-      renderedPromises = []
-      for srcPath in srcs then do (srcPath) =>
-        renderedPromises.push(@readData(
+      return Promise.all(srcs.map((srcPath) =>
+        @readData(
           @site["srcDir"], srcPath
         ).then((data) =>
           if typeof(data["raw"]) is "string"
@@ -116,85 +114,141 @@ class Router
             if data["text"] isnt data["raw"]
               if data["title"]?
                 data["title"] = data["title"].toString()
-              return @renderer.render(data, null)
-          @renderer.render(data, null).then((data) =>
-            @writeData(@site["srcDir"], data)
-          )
-          return null
-        ))
-      return Promise.all(renderedPromises)
+              if data["layout"] is "post"
+                @site["posts"].push(data)
+              else
+                # Need load templates first.
+                if data["layout"] not of @site["templates"]
+                  data["layout"] = "page"
+                @site["pages"].push(data)
+            else
+              @site["assets"].push(data)
+        )
+      ))
     )
 
-  generateAll: (ps) ->
+  renderAssets: () =>
+    return Promise.all(@site["assets"].map((asset) =>
+      @renderer.render(asset)
+    ))
+
+  renderTemplates: () =>
+    return Promise.all(Object.values(@site["templates"]).map((template) =>
+      @renderer.render(template)
+    ))
+
+  renderPosts: () =>
+    return Promise.all(@site["posts"].map((post) =>
+      @renderer.render(post)
+    ))
+
+  renderPages: () =>
+    return Promise.all(@site["pages"].map((page) =>
+      @renderer.render(page)
+    ))
+
+  generateData: (p) =>
+    lang = p["language"] or @site["siteConfig"]["language"]
+    if lang not of @translator.list()
+      try
+        language = yaml.safeLoad(fse.readFileSync(path.join(
+          @site["themeDir"],
+          "languages",
+          "#{lang}.yml"
+        )))
+        @translator.register(lang, language)
+      catch err
+        null
+    p = @generator.generate(p, @site["posts"], {
+      "site": @site,
+      "siteConfig": @site["siteConfig"],
+      "themeConfig": @site["themeConfig"],
+      "moment": moment,
+      "getURL": getURLFn(
+        @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
+      ),
+      "getAbsPath": getAbsPathFn(@site["siteConfig"]["rootDir"]),
+      "isCurrentPath": isCurrentPathFn(
+        @site["siteConfig"]["rootDir"], p["docPath"]
+      ),
+      "__": @translator.getTranslateFn(lang)
+    })
+    if p not instanceof Array
+      return [p]
+    return p
+
+  generatePosts: () =>
+    @site["posts"].sort(dateStrCompare)
     generated = []
-    for p in ps
-      lang = p["language"] or @site["siteConfig"]["language"]
-      if lang not of @translator.list()
-        try
-          language = yaml.safeLoad(fse.readFileSync(path.join(
-            @site["themeDir"],
-            "languages",
-            "#{lang}.yml"
-          )))
-          @translator.register(lang, language)
-        catch err
-          null
-      p = @generator.generate(p, @site["posts"], {
-        "site": @site,
-        "siteConfig": @site["siteConfig"],
-        "themeConfig": @site["themeConfig"],
-        "moment": moment,
-        "getURL": getURLFn(
-          @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
-        ),
-        "getAbsPath": getAbsPathFn(@site["siteConfig"]["rootDir"]),
-        "isCurrentPath": isCurrentPathFn(
-          @site["siteConfig"]["rootDir"], p["docPath"]
-        ),
-        "__": @translator.getTranslateFn(lang)
-      })
-      if p not instanceof Array
-        generated.push(p)
-      else
-        generated = generated.concat(p)
-    return generated
+    for p in @site["posts"]
+      p = @generateData(p)
+      generated.concat(p)
+    @site["posts"] = generated
+    for i in [0...@site["posts"].length]
+      if i > 0
+        @site["posts"][i]["next"] = @site["posts"][i - 1]
+      if i < @site["posts"].length - 1
+        @site["posts"][i]["prev"] = @site["posts"][i + 1]
+
+  generatePages: () =>
+    generated = []
+    for p in @site["pages"]
+      p = @generateData(p)
+      generated.concat(p)
+    @site["pages"] = generated
+
+  saveAssets: () =>
+    @site["assets"].map((asset) =>
+      @writeData(asset["srcDir"], asset)
+      return asset
+    )
+
+  savePosts: () =>
+    @site["posts"].map((post) =>
+      @site["templates"][post["layout"]]["content"](post).then((content) =>
+        post["content"] = content
+        return @writeData(@site["srcDir"], post)
+      )
+      return post
+    )
+
+  savePages: () =>
+    @site["pages"].map((page) =>
+      @site["templates"][page["layout"]]["content"](page).then((content) =>
+        page["content"] = content
+        return @writeData(@site["srcDir"], page)
+      )
+      return page
+    )
+
+  saveData: () =>
+    @site["data"].map((data) =>
+      @writeData(null, data)
+      return data
+    )
 
   route: () =>
-    @routeThemeAssets()
-    @routeTemplates().then(() =>
-      return @routeSrcs()
-    ).then((renderedPages) =>
-      for p in renderedPages
-        if not p?
-          continue
-        if p["layout"] is "post"
-          @site["posts"].push(p)
-        else
-          if p["layout"] not of @site["templates"]
-            p["layout"] = "page"
-          @site["pages"].push(p)
-      # Posts.
-      @site["posts"].sort(dateStrCompare)
-      # Custum route.
+    Promise.all([
+      @loadThemeAssets(),
+      @loadTemplates().then(() =>
+        @loadSrcs()
+    )]).then(() =>
+      @renderAssets().then(() =>
+        @saveAssets()
+      )
+      return Promise.all([
+        @renderTemplates(),
+        @renderPosts(),
+        @renderPages()
+      ])
+    ).then(() =>
       for fn in @store["beforeGenerating"]
         @site = fn(@site)
-      @site["posts"] = @generateAll(@site["posts"])
-      for i in [0...@site["posts"].length]
-        if i > 0
-          @site["posts"][i]["next"] = @site["posts"][i - 1]
-        if i < @site["posts"].length - 1
-          @site["posts"][i]["prev"] = @site["posts"][i + 1]
-      # Pages.
-      @site["pages"] = @generateAll(@site["pages"])
+      @generatePosts()
+      @generatePages()
       for fn in @store["afterGenerating"]
         @site = fn(@site)
-      for page in @site["pages"]
-        page["content"] = await @site["templates"][page["layout"]](page)
-        @writeData(@site["srcDir"], page)
-      # Merge post and template last.
-      for post in @site["posts"]
-        post["content"] = await @site["templates"][post["layout"]](post)
-        @writeData(@site["srcDir"], post)
-      for data in @site["data"]
-        @writeData(@site["srcDir"], data)
+      @savePosts()
+      @savePages()
+      @saveData()
     )

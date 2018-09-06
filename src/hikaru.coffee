@@ -117,6 +117,7 @@ class Hikaru
     @site = {
       "workDir": workDir
       "templates": {},
+      "assets": [],
       "pages": [],
       "posts": [],
       "data": []
@@ -164,7 +165,7 @@ class Hikaru
     @renderer.register([".njk", ".j2"], null, (data, ctx) ->
       # For template you must give a render function.
       template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
-      njkRender = (ctx) ->
+      data["content"] = (ctx) ->
         return new Promise((resolve, reject) ->
           template.render(ctx, (err, res) ->
             if err
@@ -172,7 +173,6 @@ class Hikaru
             return resolve(res)
           )
         )
-      return njkRender
     )
 
     markedConfig = Object.assign(
