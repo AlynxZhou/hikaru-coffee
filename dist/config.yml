@@ -5,15 +5,13 @@ author: Hikaru
 email:
 language: default
 
-# rootDir must start with `/` while url shouldn't end with `/`.
-url: https://yourdomain.com
+baseURL: https://yourdomain.com
 rootDir: /
-
-perPage: 10
-
 srcDir: src
 docDir: doc
 themeDir: aria
+
+perPage: 10
 
 skipRender:
   - README.md
@@ -23,4 +21,13 @@ marked:
   hljs: true
 
 search:
+  enable: true
   path: search.json
+
+feed:
+  enable: true
+  path: atom.xml
+  limit: 20
+  hub:
+  content: false
+  contentLimit: 140

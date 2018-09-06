@@ -2,27 +2,38 @@
 
 module.exports =
 class Translator
-  constructor: (language) ->
-    @language = language
+  constructor: (logger) ->
+    @logger = logger
+    @store = {}
 
-  __: (key) =>
-    keys = key.toString().split(".")
-    res = @language
-    for k in keys
-      if k not of res
-        return key
-      res = res[k]
-    if typeof(res) is "string"
-      return res
-    return key
+  register: (lang, obj) =>
+    if obj not instanceof Object
+      return
+    if lang instanceof Array
+      for l in lang
+        @store[l] = obj
+      return
+    @store[lang] = obj
 
-  _p: (key, args...) =>
-    keys = key.toString().split(".")
-    res = @language
-    for k in keys
-      if k not of res
+  list: () =>
+    return Object.keys(@store)
+
+  getTranslateFn: (lang) =>
+    return (key, args...) =>
+      keys = key.toString().split(".")
+      res = @store[lang]
+      if lang not of @store
+        res = @store["default"]
+      for k in keys
+        if k not of res
+          return key
+        res = res[k]
+      if typeof(res) is "string"
+        if args.length > 0
+          return vsprintf(res, args)
+        else
+          return res
+      if args.length > 0
+        return vsprintf(key, args)
+      else
         return key
-      res = res[k]
-    if typeof(res) is "string"
-      return vsprintf(res, args)
-    return vsprintf(key, args)

@@ -6,13 +6,13 @@ class Generator
 
   # fn: param page, pages, ctx, return Promise
   register: (layout, fn) =>
+    if fn not instanceof Function
+      return
     if layout instanceof Array
       for l in layout
-        if fn instanceof Function
-          @store[l] = {"layout": l, "fn": fn}
+        @store[l] = {"layout": l, "fn": fn}
       return
-    if fn instanceof Function
-      @store[layout] = {"layout": layout, "fn": fn}
+    @store[layout] = {"layout": layout, "fn": fn}
 
   generate: (page, posts, ctx) =>
     layout = page["layout"] or "page"

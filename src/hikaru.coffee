@@ -1,5 +1,7 @@
 fse = require("fs-extra")
 path = require("path")
+{URL} = require("url")
+glob = require("glob")
 
 cheerio = require("cheerio")
 moment = require("moment")
@@ -20,10 +22,13 @@ Router = require("./router")
 
 {
   escapeHTML,
+  removeControlChars,
   paginate,
   dateStrCompare,
   sortCategories,
-  paginateCategories
+  paginateCategories,
+  getAbsPathFn,
+  getURLFn
 } = require("./utils")
 
 module.exports =
@@ -36,78 +41,126 @@ class Hikaru
       @logger.debug("Hikaru is stopping...")
     )
 
-  init: (workDir = ".", configPath, srcDir, docDir, themeSrcDir) =>
-    @logger.debug("Hikaru started initialization in `#{workDir}`.")
+  init: (workDir = ".", configPath) =>
     return fse.mkdirp(workDir).then(() =>
-      @logger.debug("Hikaru created `#{workDir}/`.")
-      return fse.mkdirp(srcDir or path.join(workDir, "src"))
+      @logger.debug("Hikaru started initialization in `#{path.join(
+        workDir, path.sep
+      )}`.")
+      return fse.copy(
+        path.join(__dirname, "..", "dist", "config.yml"),
+        configPath or path.join(workDir, "config.yml")
+      )
     ).then(() =>
-      @logger.debug("Hikaru created `#{srcDir or path.join(workDir, "src")}/`.")
-      return fse.copy(path.join(__dirname, "..", "dist", "config.yml"),
-      configPath or path.join(workDir, "config.yml"))
+      @logger.debug("Hikaru copyed `#{configPath or path.join(
+        workDir, "config.yml"
+      )}`.")
+      return fse.mkdirp(path.join(workDir, "src"))
     ).then(() =>
-      @logger.debug("Hikaru copyed `#{configPath or
-      path.join(workDir, "config.yml")}`.")
-      return fse.mkdirp(docDir or path.join(workDir, "doc"))
+      @logger.debug("Hikaru created `#{path.join(
+        workDir, "src", path.sep
+      )}`.")
+      return fse.copy(
+        path.join(__dirname, "..", "dist", "archives.md"),
+        path.join(workDir, "src", "archives", "index.md")
+      )
     ).then(() =>
-      @logger.debug("Hikaru created `#{docDir or path.join(workDir, "doc")}/`.")
-      return fse.mkdirp(themeSrcDir or path.join(workDir, "themes"))
+      @logger.debug("Hikaru copyed `#{path.join(
+        workDir, "src", "archives", "index.md"
+      )}`.")
+      return fse.copy(
+        path.join(__dirname, "..", "dist", "categories.md"),
+        path.join(workDir, "src", "categories", "index.md")
+      )
     ).then(() =>
-      @logger.debug("Hikaru created `#{themeSrcDir or
-      path.join(workDir, "themes")}/`.")
+      @logger.debug("Hikaru copyed `#{path.join(
+        workDir, "src", "categories", "index.md"
+      )}`.")
+      return fse.copy(
+        path.join(__dirname, "..", "dist", "tags.md"),
+        path.join(workDir, "src", "tags", "index.md")
+      )
+    ).then(() =>
+      @logger.debug("Hikaru copyed `#{path.join(
+        workDir, "src", "tags", "index.md"
+      )}`.")
+      return fse.mkdirp(path.join(workDir, "doc"))
+    ).then(() =>
+      @logger.debug("Hikaru created `#{path.join(
+        workDir, "doc", path.sep
+      )}`.")
+      return fse.mkdirp(path.join(workDir, "themes"))
+    ).then(() =>
+      @logger.debug("Hikaru created `#{path.join(
+        workDir, "themes", path.sep
+      )}`.")
       @logger.debug("Hikaru finished initialization in `#{workDir}`.")
     ).catch(@logger.error)
 
-  clean: (workDir = ".", configPath, docDir) =>
-    @workDir = workDir
-    configPath = configPath or path.join(@workDir, "config.yml")
-    @siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-    @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
-    path.join(@workDir, "doc")
-    fse.emptyDir(@docDir).then(() =>
-      @logger.debug("Hikaru cleaned `#{@docDir}/`.")
-    ).catch(@logger.error)
+  clean: (workDir = ".", configPath) =>
+    configPath = configPath or path.join(workDir, "config.yml")
+    siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    if siteConfig?["docDir"]?
+      glob("*", {
+        "cwd": path.join(workDir, siteConfig["docDir"])
+      }, (err, res) =>
+        if err
+          return err
+        for r in res then do (r) =>
+          fse.remove(path.join(workDir, siteConfig["docDir"], r)).then(() =>
+            @logger.debug("Hikaru removed `#{path.join(
+              workDir, siteConfig["docDir"], r
+            )}`.")
+          ).catch(@logger.error)
+      )
 
-  generate: (workDir = ".", configPath, srcDir, docDir, themeDir) =>
-    @workDir = workDir
-    configPath = configPath or path.join(@workDir, "config.yml")
-    @siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-    @srcDir = srcDir or path.join(@workDir, @siteConfig["srcDir"]) or
-    path.join(@workDir, "src")
-    @docDir = docDir or path.join(@workDir, @siteConfig["docDir"]) or
-    path.join(@workDir, "doc")
-    @themeDir = (if themeDir?
-    then themeDir
-    else path.join(@workDir, "themes", @siteConfig["themeDir"]) or
-    path.join(@workDir, "themes", "aria"))
-    @themeSrcDir = (if themeDir?
-    then path.join(themeDir, "src")
-    else path.join(@workDir, "themes", @siteConfig["themeDir"], "src") or
-    path.join(@workDir, "themes", "aria", "src"))
+  generate: (workDir = ".", configPath) =>
+    @site = {
+      "workDir": workDir
+      "templates": {},
+      "pages": [],
+      "posts": [],
+      "data": []
+    }
+    configPath = configPath or path.join(@site["workDir"], "config.yml")
+    @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    @site["srcDir"] = path.join(
+      @site["workDir"], @site["siteConfig"]["srcDir"]
+    )
+    @site["docDir"] = path.join(
+      @site["workDir"], @site["siteConfig"]["docDir"]
+    )
+    @site["themeDir"] = path.join(
+      @site["workDir"], "themes", @site["siteConfig"]["themeDir"]
+    )
+    @site["themeSrcDir"] = path.join(@site["themeDir"], "src")
     try
-      @themeConfig = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
-      "config.yml")))
+      @site["themeConfig"] = yaml.safeLoad(
+        fse.readFileSync(path.join(@site["themeDir"], "config.yml"))
+      )
     catch err
       if err["code"] is "ENOENT"
         @logger.info("Hikaru continues with a empty theme config...")
-        @themeConfig = {}
-    @renderer = new Renderer(@logger, @siteConfig["skipRender"])
+        @site["themeConfig"] = {}
+    @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
     @generator = new Generator(@logger)
-    language = yaml.safeLoad(fse.readFileSync(path.join(@themeDir,
-    "languages", "#{@siteConfig["language"]}.yml")))
-    @translator = new Translator(language)
-    @router = new Router(@logger, @renderer, @generator, @translator,
-    @srcDir, @docDir, @themeSrcDir, @siteConfig, @themeConfig)
+    @translator = new Translator(@logger)
+    defaultLanguage = yaml.safeLoad(
+      fse.readFileSync(
+        path.join(@site["themeDir"], "languages", "default.yml")
+      )
+    )
+    @translator.register("default", defaultLanguage)
+    @router = new Router(@logger, @renderer, @generator, @translator, @site)
     @registerInternalRenderers()
     @registerInternalGenerators()
     @registerInternalRoutes()
     @router.route()
 
   registerInternalRenderers: () =>
-    templateDir = @themeSrcDir
-    njkConfig = Object.assign({}, {"autoescape": false},
-    @siteConfig["nunjucks"])
-    njkEnv = nunjucks.configure(templateDir, njkConfig)
+    njkConfig = Object.assign(
+      {"autoescape": false}, @site["siteConfig"]["nunjucks"]
+    )
+    njkEnv = nunjucks.configure(@site["themeSrcDir"], njkConfig)
     @renderer.register([".njk", ".j2"], null, (data, ctx) ->
       # For template you must give a render function.
       template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
@@ -122,7 +175,10 @@ class Hikaru
       return njkRender
     )
 
-    markedConfig = Object.assign({}, {"gfm": true}, @siteConfig["marked"])
+    markedConfig = Object.assign(
+      {"gfm": true},
+      @site["siteConfig"]["marked"]
+    )
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = escapeHTML(text)
@@ -145,7 +201,7 @@ class Hikaru
         try
           data["content"] = marked(
             data["text"],
-            Object.assign({}, {"renderer": renderer}, markedConfig)
+            Object.assign({"renderer": renderer}, markedConfig)
           )
           return resolve(data)
         catch err
@@ -153,7 +209,7 @@ class Hikaru
       )
     )
 
-    stylConfig = @siteConfig.stylus or {}
+    stylConfig = @site["siteConfig"]["stylus"] or {}
     @renderer.register(".styl", ".css", (data, ctx) =>
       return new Promise((resolve, reject) =>
         stylus(data["text"])
@@ -161,7 +217,7 @@ class Hikaru
         .use((style) =>
           style.define("getSiteConfig", (data) =>
             keys = data["val"].toString().split(".")
-            res = @themeConfig
+            res = @site["siteConfig"]
             for k in keys
               if k not of res
                 return null
@@ -171,14 +227,14 @@ class Hikaru
         ).use((style) =>
           style.define("getThemeConfig", (data) =>
             keys = data["val"].toString().split(".")
-            res = @themeConfig
+            res = @site["themeConfig"]
             for k in keys
               if k not of res
                 return null
               res = res[k]
             return res
           )
-        ).set("filename", path.join(@themeSrcDir, data["srcPath"]))
+        ).set("filename", path.join(@site["themeSrcDir"], data["srcPath"]))
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
@@ -196,19 +252,24 @@ class Hikaru
   registerInternalGenerators: () =>
     @generator.register("index", (page, posts, ctx) =>
       posts.sort(dateStrCompare)
-      return paginate(page, posts, ctx, @siteConfig["perPage"])
+      return paginate(page, posts, ctx, @site["siteConfig"]["perPage"])
     )
 
     @generator.register("archives", (page, posts, ctx) =>
       posts.sort(dateStrCompare)
-      return paginate(page, posts, ctx, @siteConfig["perPage"])
+      return paginate(page, posts, ctx, @site["siteConfig"]["perPage"])
     )
 
     @generator.register("categories", (page, posts, ctx) =>
       results = []
       for sub in ctx["site"]["categories"]
-        results = results.concat(paginateCategories(sub, page,
-        path.dirname(page["docPath"]), @siteConfig["perPage"], ctx))
+        results = results.concat(paginateCategories(
+          sub,
+          page,
+          path.dirname(page["docPath"]),
+          @site["siteConfig"]["perPage"],
+          ctx
+        ))
       results.push(Object.assign({}, page, ctx, {
         "categories": ctx["site"]["categories"]
       }))
@@ -226,14 +287,14 @@ class Hikaru
         p["title"] = "tag"
         p["name"] = tag["name"].toString()
         results = results.concat(paginate(p, tag["posts"],
-        ctx, @siteConfig["perPage"]))
+        ctx, @site["siteConfig"]["perPage"]))
       results.push(Object.assign({}, page, ctx, {
         "tags": ctx["site"]["tags"]
       }))
       return results
     )
 
-    @generator.register(["post", "page"], (page, posts, ctx) ->
+    @generator.register(["post", "page"], (page, posts, ctx) =>
       $ = cheerio.load(page["content"])
       # TOC generate.
       hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
@@ -252,9 +313,14 @@ class Hikaru
           "subs": []
         })
       # Replace relative path to absolute path.
+      getURL = getURLFn(
+        @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
+      )
       links = $("a")
       for a in links
         href = $(a).attr("href")
+        if new URL(href, @site["siteConfig"]["baseURL"]).host isnt getURL().host
+          $(a).attr("target", "_blank")
         if href.startsWith("https://") or href.startsWith("http://") or
         href.startsWith("//") or href.startsWith("/") or
         href.startsWith("#")
@@ -279,7 +345,7 @@ class Hikaru
     )
 
   registerInternalRoutes: () =>
-    @router.register((site) ->
+    @router.register("beforeGenerating", (site) ->
       # Generate categories
       ###
       [
@@ -329,7 +395,7 @@ class Hikaru
       return site
     )
 
-    @router.register((site) ->
+    @router.register("beforeGenerating", (site) ->
       # Generate tags.
       ###
       [
@@ -369,27 +435,28 @@ class Hikaru
       return site
     )
 
-    @router.register((site) ->
+    @router.register("afterGenerating", (site) ->
       if not site["siteConfig"]["search"]["enable"]
         return site
       # Generate search index.
       search = []
       all = site["pages"].concat(site["posts"])
+      getAbsPath = getAbsPathFn(site["siteConfig"]["rootDir"])
       for p in all
         search.push({
           "title": "#{p["title"]}",
-          "url": path.posix.join(site["siteConfig"]["rootDir"], p["docPath"]),
+          "url": getAbsPath(p["docPath"]),
           "content": p["text"]
         })
       site["data"].push({
-        "srcPath": site["siteConfig"]["search"]["path"] or "search.json",
+        # "srcPath": site["siteConfig"]["search"]["path"] or "search.json",
         "docPath": site["siteConfig"]["search"]["path"] or "search.json",
         "content": JSON.stringify(search)
       })
       return site
     )
 
-    @router.register((site) ->
+    @router.register("afterGenerating", (site) ->
       if not site["siteConfig"]["feed"]["enable"]
         return site
       # Generate RSS feed.
@@ -402,12 +469,13 @@ class Hikaru
         "themeConfig": site["themeConfig"],
         "posts": site["posts"],
         "moment": moment,
-        "pathPx": path.posix,
-        "encodeURI": encodeURI,
-        "encodeURIComponent": encodeURIComponent
+        "removeControlChars": removeControlChars,
+        "getURL": getURLFn(site["siteConfig"]["baseURL"],
+        site["siteConfig"]["rootDir"]),
+        "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
       })
       site["data"].push({
-        "srcPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
+        # "srcPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
         "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
         "content": content
       })

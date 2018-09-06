@@ -9,13 +9,13 @@ class Renderer
 
   # fn: param data, ctx, return Promise
   register: (srcExt, docExt, fn) =>
+    if fn not instanceof Function
+      return
     if srcExt instanceof Array
       for s in srcExt
-        if fn instanceof Function
-          @store[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
+        @store[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
       return
-    if fn instanceof Function
-      @store[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
+    @store[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
 
   render: (data, ctx) =>
     srcExt = path.extname(data["srcPath"])

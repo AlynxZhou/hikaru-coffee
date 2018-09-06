@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{{ siteConfig.title }}</title>
-  {% if themeConfig.avatar %}<icon>{{ pathPx.join(siteConfig.rootDir, themeConfig.avatar) }}</icon>{% endif %}
+  {% if themeConfig.avatar %}<icon>{{ getAbsPath(themeConfig.avatar) }}</icon>{% endif %}
   {% if siteConfig.subtitle %}<subtitle>{{ siteConfig.subtitle }}</subtitle>{% endif %}
-  <link href="{{ pathPx.join(siteConfig.rootDir, siteConfig.feed.path or "atom.xml") }}" rel="self" />
-  {% if siteConfig.feed.hub %}<link href="{{ encodeURI(siteConfig.feed.hub) }}" rel="hub"/>{% endif %}
-  <link href="{{ encodeURI(siteConfig.url) }}" />
+  <link href="{{ getAbsPath(siteConfig.feed.path or "atom.xml") }}" rel="self" />
+  {% if siteConfig.feed.hub %}<link href="{{ siteConfig.feed.hub }}" rel="hub"/>{% endif %}
+  <link href="{{ siteConfig.baseURL }}" />
   <updated>{{ moment(posts[0].date).format() }}</updated>
-  <id>{{ siteConfig.url + "/" }}</id>
+  <id>{{ getURL() }}</id>
   {% if siteConfig.author %}
   <author>
     <name>{{ siteConfig.author }}</name>
@@ -18,27 +18,27 @@
   {% for post in posts.slice(0, siteConfig.feed.limit) %}
   <entry>
     <title>{{ post.title }}</title>
-    <link href="{{ pathPx.join(siteConfig.rootDir, post.docPath) }}" />
-    <id>{{ siteConfig.url + pathPx.join(siteConfig.rootDir, post.docPath) }}</id>
+    <link href="{{ getAbsPath(post.docPath) }}" />
+    <id>{{ siteConfig.baseURL + getAbsPath(post.docPath) }}</id>
     <published>{{ moment(post.date).format() }}</published>
     <updated>{{ moment(post.date).format() }}</updated>
     {% if siteConfig.feed.content and post.content %}
-    <content type="html"><![CDATA[{{ post.content | escape }}]]></content>
+    <content type="html"><![CDATA[{{ removeControlChars(post.content) | safe }}]]></content>
     {% endif %}
     <summary type="html">
     {% if post.excerpt %}
-    {{ post.excerpt }}
+    <![CDATA[{{ removeControlChars(post.excerpt) | safe }}]]>
     {% elif post.description %}
-    {{ post.description }}
-    {% elif post.content %}
-    {{ post.text.substring(0, siteConfig.feed.contentLimit) | escape }}
+    <![CDATA[{{ removeControlChars(post.description) | safe }}]]>
+    {% elif post.text %}
+    <![CDATA[{{ removeControlChars(post.text.substring(0, siteConfig.feed.contentLimit)) | safe }}]]>
     {% endif %}
     </summary>
     {% for category in post.categories %}
-    <category term="{{ category.name }}" />
+    <category term="{{ category.name }}" scheme="{{ getURL(category.docPath) }}" />
     {% endfor %}
     {% for tag in post.tags %}
-    <category term="{{ tag.name }}" />
+    <category term="{{ tag.name }}" scheme="{{ getURL(tag.docPath) }}" />
     {% endfor %}
   </entry>
   {% endfor %}
