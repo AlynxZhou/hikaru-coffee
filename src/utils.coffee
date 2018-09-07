@@ -73,10 +73,10 @@ getAbsPathFn = (rootDir = path.posix.sep) ->
     return encodeURI(path.posix.join(rootDir,
     docPath.replace(path.win32.sep, path.posix.sep)))
 
-getURLFn = (baseURL, rootDir = path.posix.sep) ->
+getUrlFn = (baseUrl, rootDir = path.posix.sep) ->
   getAbsPath = getAbsPathFn(rootDir)
   return (docPath = "") ->
-    return new URL(getAbsPath(docPath), baseURL)
+    return new URL(getAbsPath(docPath), baseUrl)
 
 isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
   # Must join a "/" before resolve or it will join current work dir.
@@ -107,6 +107,6 @@ module.exports = {
   "sortCategories": sortCategories,
   "paginateCategories": paginateCategories,
   "getAbsPathFn": getAbsPathFn,
-  "getURLFn": getURLFn,
+  "getUrlFn": getUrlFn,
   "isCurrentPathFn": isCurrentPathFn
 }

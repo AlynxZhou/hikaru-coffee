@@ -28,7 +28,7 @@ Router = require("./router")
   sortCategories,
   paginateCategories,
   getAbsPathFn,
-  getURLFn
+  getUrlFn
 } = require("./utils")
 
 module.exports =
@@ -313,13 +313,13 @@ class Hikaru
           "subs": []
         })
       # Replace relative path to absolute path.
-      getURL = getURLFn(
-        @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
+      getUrl = getUrlFn(
+        @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
       )
       links = $("a")
       for a in links
         href = $(a).attr("href")
-        if new URL(href, @site["siteConfig"]["baseURL"]).host isnt getURL().host
+        if new URL(href, @site["siteConfig"]["baseUrl"]).host isnt getUrl().host
           $(a).attr("target", "_blank")
         if href.startsWith("https://") or href.startsWith("http://") or
         href.startsWith("//") or href.startsWith("/") or
@@ -470,7 +470,7 @@ class Hikaru
         "posts": site["posts"],
         "moment": moment,
         "removeControlChars": removeControlChars,
-        "getURL": getURLFn(site["siteConfig"]["baseURL"],
+        "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
         site["siteConfig"]["rootDir"]),
         "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
       })

@@ -5,9 +5,9 @@
   {% if siteConfig.subtitle %}<subtitle>{{ siteConfig.subtitle }}</subtitle>{% endif %}
   <link href="{{ getAbsPath(siteConfig.feed.path or "atom.xml") }}" rel="self" />
   {% if siteConfig.feed.hub %}<link href="{{ siteConfig.feed.hub }}" rel="hub"/>{% endif %}
-  <link href="{{ siteConfig.baseURL }}" />
+  <link href="{{ siteConfig.baseUrl }}" />
   <updated>{{ moment(posts[0].date).format() }}</updated>
-  <id>{{ getURL() }}</id>
+  <id>{{ getUrl() }}</id>
   {% if siteConfig.author %}
   <author>
     <name>{{ siteConfig.author }}</name>
@@ -19,7 +19,7 @@
   <entry>
     <title>{{ post.title }}</title>
     <link href="{{ getAbsPath(post.docPath) }}" />
-    <id>{{ siteConfig.baseURL + getAbsPath(post.docPath) }}</id>
+    <id>{{ siteConfig.baseUrl + getAbsPath(post.docPath) }}</id>
     <published>{{ moment(post.date).format() }}</published>
     <updated>{{ moment(post.date).format() }}</updated>
     {% if siteConfig.feed.content and post.content %}
@@ -35,10 +35,10 @@
     {% endif %}
     </summary>
     {% for category in post.categories %}
-    <category term="{{ category.name }}" scheme="{{ getURL(category.docPath) }}" />
+    <category term="{{ category.name }}" scheme="{{ getUrl(category.docPath) }}" />
     {% endfor %}
     {% for tag in post.tags %}
-    <category term="{{ tag.name }}" scheme="{{ getURL(tag.docPath) }}" />
+    <category term="{{ tag.name }}" scheme="{{ getUrl(tag.docPath) }}" />
     {% endfor %}
   </entry>
   {% endfor %}

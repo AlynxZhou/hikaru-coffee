@@ -8,7 +8,7 @@ moment = require("moment")
 {
   dateStrCompare,
   getAbsPathFn,
-  getURLFn,
+  getUrlFn,
   isCurrentPathFn
 } = require("./utils")
 
@@ -24,8 +24,8 @@ class Router
       "beforeGenerating": [],
       "afterGenerating": []
     }
-    @getURL = getURLFn(
-      @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
+    @getUrl = getUrlFn(
+      @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
     )
     @getAbsPath = getAbsPathFn(@site["siteConfig"]["rootDir"])
 
@@ -166,7 +166,7 @@ class Router
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],
       "moment": moment,
-      "getURL": @getURL,
+      "getUrl": @getUrl,
       "getAbsPath": @getAbsPath,
       "isCurrentPath": isCurrentPathFn(
         @site["siteConfig"]["rootDir"], p["docPath"]
