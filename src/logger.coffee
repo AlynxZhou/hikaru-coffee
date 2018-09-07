@@ -1,14 +1,16 @@
+colors = require("colors/safe")
+
 module.exports =
 class Logger
   constructor: (debug) ->
     @isDebug = debug
 
   info: (strs...) ->
-    console.log("INFO:", strs...)
+    console.log(colors.yellow("INFO:"), strs...)
 
   debug: (strs...) ->
     if @isDebug
-      console.debug("DEBUG:", strs...)
+      console.debug(colors.green("DEBUG:"), strs...)
 
   error: (strs...) ->
-    console.log("ERROR:", strs...)
+    console.log(colors.red("ERROR:"), strs...)

@@ -2,9 +2,9 @@ fse = require("fs-extra")
 path = require("path")
 {URL} = require("url")
 glob = require("glob")
-
 cheerio = require("cheerio")
 moment = require("moment")
+colors = require("colors/safe")
 
 yaml = require("js-yaml")
 nunjucks = require("nunjucks")
@@ -19,7 +19,6 @@ Renderer = require("./renderer")
 Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
-
 {
   escapeHTML,
   removeControlChars,
@@ -43,58 +42,56 @@ class Hikaru
 
   init: (workDir = ".", configPath) =>
     return fse.mkdirp(workDir).then(() =>
-      @logger.debug("Hikaru started initialization in `#{path.join(
-        workDir, path.sep
+      @logger.debug("Hikaru is copying `#{colors.cyan(
+        configPath or path.join(workDir, "config.yml")
       )}`.")
       return fse.copy(
         path.join(__dirname, "..", "dist", "config.yml"),
         configPath or path.join(workDir, "config.yml")
       )
     ).then(() =>
-      @logger.debug("Hikaru copyed `#{configPath or path.join(
-        workDir, "config.yml"
+      @logger.debug("Hikaru is creating `#{colors.cyan(
+        path.join(workDir, "src", path.sep)
       )}`.")
       return fse.mkdirp(path.join(workDir, "src"))
     ).then(() =>
-      @logger.debug("Hikaru created `#{path.join(
-        workDir, "src", path.sep
-      )}`.")
+      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+        workDir, "src", "archives", "index.md"
+      ))}`.")
       return fse.copy(
         path.join(__dirname, "..", "dist", "archives.md"),
         path.join(workDir, "src", "archives", "index.md")
       )
     ).then(() =>
-      @logger.debug("Hikaru copyed `#{path.join(
-        workDir, "src", "archives", "index.md"
-      )}`.")
+      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+        workDir, "src", "categories", "index.md"
+      ))}`.")
       return fse.copy(
         path.join(__dirname, "..", "dist", "categories.md"),
         path.join(workDir, "src", "categories", "index.md")
       )
     ).then(() =>
-      @logger.debug("Hikaru copyed `#{path.join(
-        workDir, "src", "categories", "index.md"
-      )}`.")
+      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+        workDir, "src", "tags", "index.md"
+      ))}`.")
       return fse.copy(
         path.join(__dirname, "..", "dist", "tags.md"),
         path.join(workDir, "src", "tags", "index.md")
       )
     ).then(() =>
-      @logger.debug("Hikaru copyed `#{path.join(
-        workDir, "src", "tags", "index.md"
-      )}`.")
+      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
+        workDir, "doc", path.sep
+      ))}`.")
       return fse.mkdirp(path.join(workDir, "doc"))
     ).then(() =>
-      @logger.debug("Hikaru created `#{path.join(
-        workDir, "doc", path.sep
-      )}`.")
-      return fse.mkdirp(path.join(workDir, "themes"))
-    ).then(() =>
-      @logger.debug("Hikaru created `#{path.join(
+      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
         workDir, "themes", path.sep
-      )}`.")
-      @logger.debug("Hikaru finished initialization in `#{workDir}`.")
-    ).catch(@logger.error)
+      ))}`.")
+      return fse.mkdirp(path.join(workDir, "themes"))
+    ).catch((err) =>
+      @logger.info("Hikaru catched some error during initializing!")
+      @logger.error(err)
+    )
 
   clean: (workDir = ".", configPath) =>
     configPath = configPath or path.join(workDir, "config.yml")
@@ -106,11 +103,20 @@ class Hikaru
         if err
           return err
         for r in res then do (r) =>
-          fse.remove(path.join(workDir, siteConfig["docDir"], r)).then(() =>
-            @logger.debug("Hikaru removed `#{path.join(
-              workDir, siteConfig["docDir"], r
-            )}`.")
-          ).catch(@logger.error)
+          fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>
+            if stats.isDirectory()
+              @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
+                workDir, siteConfig["docDir"], r, path.sep
+              ))}`.")
+            else
+              @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
+                workDir, siteConfig["docDir"], r
+              ))}`.")
+            return fse.remove(path.join(workDir, siteConfig["docDir"], r))
+          ).catch((err) =>
+            @logger.info("Hikaru catched some error during cleaning!")
+            @logger.error(err)
+          )
       )
 
   generate: (workDir = ".", configPath) =>
@@ -123,7 +129,12 @@ class Hikaru
       "data": []
     }
     configPath = configPath or path.join(@site["workDir"], "config.yml")
-    @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    try
+      @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    catch err
+      @logger.info("Hikaru cannot find site config!")
+      @logger.error(err)
+      process.exit(-1)
     @site["srcDir"] = path.join(
       @site["workDir"], @site["siteConfig"]["srcDir"]
     )
@@ -145,16 +156,25 @@ class Hikaru
     @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
-    defaultLanguage = yaml.safeLoad(
-      fse.readFileSync(
-        path.join(@site["themeDir"], "languages", "default.yml")
+    try
+      defaultLanguage = yaml.safeLoad(
+        fse.readFileSync(
+          path.join(@site["themeDir"], "languages", "default.yml")
+        )
       )
-    )
-    @translator.register("default", defaultLanguage)
+      @translator.register("default", defaultLanguage)
+    catch err
+      if err["code"] is "ENOENT"
+        @logger.info("Hikaru cannot find default language file in your theme.")
     @router = new Router(@logger, @renderer, @generator, @translator, @site)
-    @registerInternalRenderers()
-    @registerInternalGenerators()
-    @registerInternalRoutes()
+    try
+      @registerInternalRenderers()
+      @registerInternalGenerators()
+      @registerInternalRoutes()
+    catch err
+      @logger.info("Hikaru cannot register internal functions!")
+      @logger.error(err)
+      process.exit(-2)
     @router.route()
 
   registerInternalRenderers: () =>
@@ -179,11 +199,17 @@ class Hikaru
       {"gfm": true},
       @site["siteConfig"]["marked"]
     )
+    headerIds = {}
     renderer = new marked.Renderer()
     renderer.heading = (text, level) ->
       escaped = escapeHTML(text)
-      return "<h#{level} id=\"#{escaped}\">" +
-      "<a class=\"headerlink\" href=\"##{escaped}\" title=\"#{escaped}\">" +
+      if headerIds[escaped]
+        id = "#{escaped}-#{headerIds[escaped]++}"
+      else
+        id = escaped
+        headerIds[escaped] = 1
+      return "<h#{level} id=\"#{id}\">" +
+      "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
       "</a>" +
       "#{text}" +
       "</h#{level}>"
@@ -203,6 +229,7 @@ class Hikaru
             data["text"],
             Object.assign({"renderer": renderer}, markedConfig)
           )
+          headerIds = {}
           return resolve(data)
         catch err
           return reject(err)

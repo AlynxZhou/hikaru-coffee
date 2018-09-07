@@ -7,6 +7,7 @@ class Generator
   # fn: param page, pages, ctx, return Promise
   register: (layout, fn) =>
     if fn not instanceof Function
+      throw new TypeError("fn must be a Function!")
       return
     if layout instanceof Array
       for l in layout

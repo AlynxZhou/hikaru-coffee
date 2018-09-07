@@ -8,6 +8,9 @@ class Translator
 
   register: (lang, obj) =>
     if obj not instanceof Object
+      throw new TypeError(
+        "obj must be a Object generated from yaml language file!"
+      )
       return
     if lang instanceof Array
       for l in lang
@@ -23,6 +26,7 @@ class Translator
       keys = key.toString().split(".")
       res = @store[lang]
       if lang not of @store
+        @logger.debug("Hikaru cannot find language `#{lang}`, using default.")
         res = @store["default"]
       for k in keys
         if k not of res

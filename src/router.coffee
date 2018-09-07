@@ -3,6 +3,7 @@ fm = require("front-matter")
 fse = require("fs-extra")
 yaml = require("js-yaml")
 glob = require("glob")
+colors = require("colors/safe")
 moment = require("moment")
 
 {
@@ -32,9 +33,12 @@ class Router
   # fn: param site, change site.
   register: (type, fn) =>
     if type not of @store
+      throw new TypeError("type must be a String in #{Object.keys(@store)}!")
       return
-    if fn instanceof Function
-      @store[type].push(fn)
+    if fn not instanceof Function
+      throw new TypeError("fn must be a Function!")
+      return
+    @store[type].push(fn)
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -46,7 +50,9 @@ class Router
     )
 
   readData: (srcDir, srcPath) =>
-    @logger.debug("Hikaru is reading `#{path.join(srcDir, srcPath)}`...")
+    @logger.debug("Hikaru is reading `#{colors.cyan(
+      path.join(srcDir, srcPath)
+    )}`...")
     return fse.readFile(path.join(srcDir, srcPath), "utf8").then((raw) ->
       return {
         "srcPath": srcPath,
@@ -57,8 +63,8 @@ class Router
     )
 
   writeData: (srcDir, data) =>
-    @logger.debug("Hikaru is writing `#{path.join(
-      @site["docDir"], data["docPath"]
+    @logger.debug("Hikaru is writing `#{colors.cyan(
+      path.join(@site["docDir"], data["docPath"])
     )}`...")
     if data["content"]?
       return fse.outputFile(
@@ -160,7 +166,10 @@ class Router
         )))
         @translator.register(lang, language)
       catch err
-        null
+        if err["code"] is "ENOENT"
+          @logger.info(
+            "Hikaru cannot find `#{lang}` language file in your theme."
+          )
     p = @generator.generate(p, @site["posts"], {
       "site": @site,
       "siteConfig": @site["siteConfig"],
@@ -231,10 +240,14 @@ class Router
     return Promise.all([
       @loadThemeAssets(),
       @loadTemplates().then(() =>
-        @loadSrcs()
+        return @loadSrcs()
     )]).then(() =>
       @renderAssets().then(() =>
-        @saveAssets()
+        return @saveAssets()
+      ).catch((err) =>
+        @logger.info("Hikaru catched some error during generating!")
+        @logger.error(err)
+        @logger.info("Hikaru advise you to check generating files!")
       )
       return Promise.all([
         @renderTemplates(),
@@ -248,7 +261,13 @@ class Router
       @generatePages()
       for fn in @store["afterGenerating"]
         @site = fn(@site)
-      @savePosts()
-      @savePages()
-      @saveData()
+      return Promise.all([
+        @savePosts(),
+        @savePages(),
+        @saveData()
+      ])
+    ).catch((err) =>
+      @logger.info("Hikaru catched some error during generating!")
+      @logger.error(err)
+      @logger.info("Hikaru advise you to check generating files!")
     )
