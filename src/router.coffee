@@ -24,6 +24,10 @@ class Router
       "beforeGenerating": [],
       "afterGenerating": []
     }
+    @getURL = getURLFn(
+      @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
+    )
+    @getAbsPath = getAbsPathFn(@site["siteConfig"]["rootDir"])
 
   # fn: param site, change site.
   register: (type, fn) =>
@@ -162,10 +166,8 @@ class Router
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],
       "moment": moment,
-      "getURL": getURLFn(
-        @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
-      ),
-      "getAbsPath": getAbsPathFn(@site["siteConfig"]["rootDir"]),
+      "getURL": @getURL,
+      "getAbsPath": @getAbsPath,
       "isCurrentPath": isCurrentPathFn(
         @site["siteConfig"]["rootDir"], p["docPath"]
       ),

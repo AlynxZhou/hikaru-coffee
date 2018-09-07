@@ -18,10 +18,10 @@ A static site generator that generates routes based on directories naturally.
 
 Router:
 
-    - Load each post then compile template and cache and render then call generator then save.
-    - Load each asset then render then save.
-    - Load each page then compile template and cache and render then call generator then save.
-    - Make custom site variables before pages and posts are generated.
+- Load each post then compile template and cache and render then call generator then save.
+- Load each asset then render then save.
+- Load each page then compile template and cache and render then call generator then save.
+- Make custom site variables before pages and posts are generated.
 
 Renderer: Register srcExt, docExt and fn, render data and return a promise of data.
 
@@ -46,7 +46,6 @@ Generator: Receive page(data), posts and ctx then return a promise of data.
 - [X] Local search JSON gengrating.
 - [X] RSS feed generating.
 - [X] Porting theme ARIA.
-- [ ] File watch and live reload server. (No idea and hard to implement, may not add).
 
 # Dir Structure
 
