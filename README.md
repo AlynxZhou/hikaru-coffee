@@ -18,7 +18,7 @@ A static site generator that generates routes based on directories naturally.
 
 ## Router
 
-Load files and generate routes and save files.
+Load files and generate routes and render page and post context with templates and save files.
 
 ## Renderer
 
@@ -26,7 +26,7 @@ Render file contents by calling custom functions.
 
 ## Processer
 
-Process file to context by calling custom functions and then render context with templates.
+Process file to context by calling custom functions.
 
 ## Generator
 

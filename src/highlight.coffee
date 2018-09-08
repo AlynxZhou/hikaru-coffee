@@ -16,8 +16,9 @@ loadLangAliases = () ->
 highlightAuto = (str) ->
   for alias, lang in aliases
     if not hljs.getLanguage(lang)?
-      hljs.registerLanguage(lang,
-      require("highlight.js/lib/languages/#{lang}"))
+      hljs.registerLanguage(
+        lang, require("highlight.js/lib/languages/#{lang}")
+      )
   data = hljs.highlightAuto(str)
   if data["relevance"] > 0 and data["language"]
     return data

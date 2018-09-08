@@ -142,7 +142,7 @@ class Router
       @renderer.render(page)
     ))
 
-  processData: (p) =>
+  processP: (p) =>
     lang = p["language"] or @site["siteConfig"]["language"]
     if lang not of @translator.list()
       try
@@ -157,7 +157,7 @@ class Router
           @logger.info(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    return await @processer.process(p, @site["posts"], @site["templates"], {
+    ps = await @processer.process(p, @site["posts"], @site["templates"], {
       "site": @site,
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],
@@ -169,12 +169,15 @@ class Router
       ),
       "__": @translator.getTranslateFn(lang)
     })
+    if ps not instanceof Array
+      return [ps]
+    return ps
 
   processPosts: () =>
     @site["posts"].sort(dateStrCompare)
     processed = []
     for p in @site["posts"]
-      p = await @processData(p)
+      p = await @processP(p)
       processed = processed.concat(p)
     @site["posts"] = processed
     for i in [0...@site["posts"].length]
@@ -186,7 +189,7 @@ class Router
   processPages: () =>
     processed = []
     for p in @site["pages"]
-      p = await @processData(p)
+      p = await @processP(p)
       processed = processed.concat(p)
     @site["pages"] = processed
 
@@ -237,6 +240,17 @@ class Router
       # processPages() needs to wait for processed posts.
       await @processPosts()
       await @processPages()
+      # Render post template needs tag and category links,
+      # but those links are only generated after processing pages.
+      # Maybe change tags and categories routes to a fix path in future.
+      @site["posts"] = await Promise.all(@site["posts"].map((p) =>
+        p["content"] = await @site["templates"][p["layout"]]["content"](p)
+        return p
+      ))
+      @site["pages"] = await Promise.all(@site["pages"].map((p) =>
+        p["content"] = await @site["templates"][p["layout"]]["content"](p)
+        return p
+      ))
       @site = await @generator.generate("afterProcessing", @site)
       @savePosts()
       @savePages()

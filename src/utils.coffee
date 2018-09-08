@@ -12,27 +12,29 @@ escapeHTML = (str) ->
 removeControlChars = (str) ->
   return str.replace(/[\x00-\x1F\x7F]/g, "")
 
-paginate = (page, posts, ctx, perPage) ->
+paginate = (p, posts, ctx, perPage) ->
   if not perPage
     perPage = 10
   results = []
   perPagePosts = []
   for post in posts
     if perPagePosts.length is perPage
-      results.push(Object.assign({}, page, ctx, {"posts": perPagePosts}))
+      results.push(Object.assign({}, p, ctx, {"posts": perPagePosts}))
       perPagePosts = []
     perPagePosts.push(post)
-  results.push(Object.assign({}, page, ctx, {"posts": perPagePosts}))
+  results.push(Object.assign({}, p, ctx, {"posts": perPagePosts}))
   results[0]["pageArray"] = results
   results[0]["pageIndex"] = 0
-  results[0]["docPath"] = page["docPath"]
+  results[0]["docPath"] = p["docPath"]
   for i in [1...results.length]
     results[i]["pageArray"] = results
     results[i]["pageIndex"] = i
-    results[i]["docPath"] = path.join(path.dirname(page["docPath"]),
-    "#{path.basename(
-      page["docPath"], path.extname(page["docPath"])
-    )}-#{i + 1}.html")
+    results[i]["docPath"] = path.join(
+      path.dirname(p["docPath"]),
+      "#{path.basename(
+        p["docPath"], path.extname(p["docPath"])
+      )}-#{i + 1}.html"
+    )
   return results
 
 dateStrCompare = (a, b) ->
@@ -46,18 +48,18 @@ sortCategories = (category) ->
   for sub in category["subs"]
     sortCategories(sub)
 
-paginateCategories = (category, page, parentPath, perPage, ctx) ->
+paginateCategories = (category, p, parentPath, perPage, ctx) ->
   results = []
-  p = Object.assign({}, page)
-  p["layout"] = "category"
-  p["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
-  category["docPath"] = p["docPath"]
-  p["title"] = "category"
-  p["name"] = category["name"].toString()
-  results = results.concat(paginate(p, category["posts"], ctx, perPage))
+  sp = Object.assign({}, p)
+  sp["layout"] = "category"
+  sp["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
+  category["docPath"] = sp["docPath"]
+  sp["title"] = "category"
+  sp["name"] = category["name"].toString()
+  results = results.concat(paginate(sp, category["posts"], ctx, perPage))
   for sub in category["subs"]
     results = results.concat(
-      paginateCategories(sub, page, path.join(
+      paginateCategories(sub, p, path.join(
         parentPath, "#{category["name"]}"
       ), perPage, ctx)
     )
@@ -70,8 +72,9 @@ getAbsPathFn = (rootDir = path.posix.sep) ->
       rootDir = path.posix.join(path.posix.sep, rootDir)
     if docPath.endsWith("index.html")
       docPath = docPath.substring(0, docPath.length - "index.html".length)
-    return encodeURI(path.posix.join(rootDir,
-    docPath.replace(path.win32.sep, path.posix.sep)))
+    return encodeURI(path.posix.join(
+      rootDir, docPath.replace(path.win32.sep, path.posix.sep)
+    ))
 
 getUrlFn = (baseUrl, rootDir = path.posix.sep) ->
   getAbsPath = getAbsPathFn(rootDir)

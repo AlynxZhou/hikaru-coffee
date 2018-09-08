@@ -306,7 +306,7 @@ class Hikaru
         try
           posts.sort(dateStrCompare)
           return resolve(paginate(
-            page, posts, ctx, @site["siteConfig"]["perPage"])
+            p, posts, ctx, @site["siteConfig"]["perPage"])
           )
         catch err
           return reject(err)
@@ -317,8 +317,9 @@ class Hikaru
       return new Promise((resolve, reject) =>
         try
           posts.sort(dateStrCompare)
-          return resolve(paginate(page, posts, ctx,
-          @site["siteConfig"]["perPage"]))
+          return resolve(paginate(
+            p, posts, ctx, @site["siteConfig"]["perPage"]
+          ))
         catch err
           return reject(err)
       )
@@ -331,12 +332,12 @@ class Hikaru
           for sub in ctx["site"]["categories"]
             results = results.concat(paginateCategories(
               sub,
-              page,
-              path.dirname(page["docPath"]),
+              p,
+              path.dirname(p["docPath"]),
               @site["siteConfig"]["perPage"],
               ctx
             ))
-          results.push(Object.assign({}, page, ctx, {
+          results.push(Object.assign({}, p, ctx, {
             "categories": ctx["site"]["categories"]
           }))
           return resolve(results)
@@ -350,17 +351,18 @@ class Hikaru
         try
           results = []
           for tag in ctx["site"]["tags"]
-            p = Object.assign({}, page)
-            p["layout"] = "tag"
-            p["docPath"] = path.join(
-              path.dirname(page["docPath"]), "#{tag["name"]}", "index.html"
+            sp = Object.assign({}, p)
+            sp["layout"] = "tag"
+            sp["docPath"] = path.join(
+              path.dirname(sp["docPath"]), "#{tag["name"]}", "index.html"
             )
-            tag["docPath"] = p["docPath"]
-            p["title"] = "tag"
-            p["name"] = tag["name"].toString()
-            results = results.concat(paginate(p, tag["posts"],
-            ctx, @site["siteConfig"]["perPage"]))
-          results.push(Object.assign({}, page, ctx, {
+            tag["docPath"] = sp["docPath"]
+            sp["title"] = "tag"
+            sp["name"] = tag["name"].toString()
+            results = results.concat(paginate(
+              sp, tag["posts"], ctx, @site["siteConfig"]["perPage"]
+            ))
+          results.push(Object.assign({}, p, ctx, {
             "tags": ctx["site"]["tags"]
           }))
           return resolve(results)
@@ -372,7 +374,7 @@ class Hikaru
     @processer.register(["post", "page"], (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          $ = cheerio.load(page["content"])
+          $ = cheerio.load(p["content"])
           # TOC generate.
           hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
           headings = $(hNames.join(", "))
@@ -405,7 +407,7 @@ class Hikaru
             href.startsWith("#")
               continue
             $(a).attr("href", path.posix.join(path.posix.sep,
-            path.posix.dirname(page["docPath"]), href))
+            path.posix.dirname(p["docPath"]), href))
           imgs = $("img")
           for i in imgs
             src = $(i).attr("src")
@@ -414,13 +416,13 @@ class Hikaru
             src.startsWith("data:image")
               continue
             $(i).attr("src", path.posix.join(path.posix.sep,
-            path.posix.dirname(page["docPath"]), src))
-          page["content"] = $("body").html()
-          if page["content"].indexOf("<!--more-->") isnt -1
-            split = page["content"].split("<!--more-->")
-            page["excerpt"] = split[0]
-            page["more"] = split[1]
-          return resolve(Object.assign({}, page, ctx, {"toc": toc, "$": $}))
+            path.posix.dirname(p["docPath"]), src))
+          p["content"] = $("body").html()
+          if p["content"].indexOf("<!--more-->") isnt -1
+            split = p["content"].split("<!--more-->")
+            p["excerpt"] = split[0]
+            p["more"] = split[1]
+          return resolve(Object.assign({}, p, ctx, {"toc": toc, "$": $}))
         catch err
           return reject(err)
       )

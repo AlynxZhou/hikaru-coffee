@@ -22,14 +22,5 @@ class Processer
       "Hikaru is processing `#{colors.cyan(p["docPath"])}`..."
     )
     if p["layout"] of @_
-      ps = await @_[p["layout"]]["fn"](p, posts, ctx)
-      if ps instanceof Array
-        return await Promise.all(ps.map((pp) ->
-          pp["content"] = await templates[pp["layout"]]["content"](pp)
-          return pp
-        ))
-      ps["content"] = await templates[ps["layout"]]["content"](ps)
-      return [ps]
-    p = Objects.assign({}, p, ctx)
-    p["content"] = await templates[p["layout"]]["content"](p)
-    return [p]
+      return @_[p["layout"]]["fn"](p, posts, ctx)
+    return Object.assign({}, p, ctx)
