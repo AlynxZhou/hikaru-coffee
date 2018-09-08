@@ -31,3 +31,7 @@ feed:
   hub:
   content: false
   contentLimit: 140
+
+sitemap:
+  enable: true
+  path: sitemap.xml

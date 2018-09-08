@@ -534,6 +534,32 @@ class Hikaru
     @generator.register("afterProcessing", (site) ->
       return new Promise((resolve, reject) ->
         try
+          if not site["siteConfig"]["sitemap"]["enable"]
+            return resolve(site)
+          # Generate sitemap.
+          tmpContent = fse.readFileSync(path.join(
+            __dirname, "..", "dist", "sitemap.njk"
+          ), "utf8")
+          content = nunjucks.renderString(tmpContent, {
+            "posts": site["posts"],
+            "moment": moment,
+            "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
+            site["siteConfig"]["rootDir"]),
+            "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
+          })
+          site["data"].push({
+            "docPath": site["siteConfig"]["sitemap"]["path"] or "sitemap.xml",
+            "content": content
+          })
+          return resolve(site)
+        catch err
+          return reject(err)
+      )
+    )
+
+    @generator.register("afterProcessing", (site) ->
+      return new Promise((resolve, reject) ->
+        try
           if not site["siteConfig"]["feed"]["enable"]
             return resolve(site)
           # Generate RSS feed.
@@ -541,7 +567,6 @@ class Hikaru
             __dirname, "..", "dist", "atom.njk"
           ), "utf8")
           content = nunjucks.renderString(tmpContent, {
-            "site": site,
             "siteConfig": site["siteConfig"],
             "themeConfig": site["themeConfig"],
             "posts": site["posts"],
