@@ -15,30 +15,17 @@ moment = require("moment")
 
 module.exports =
 class Router
-  constructor: (logger, renderer, generator, translator, site) ->
+  constructor: (logger, renderer, processer, generator, translator, site) ->
     @logger = logger
     @renderer = renderer
+    @processer = processer
     @generator = generator
     @translator = translator
     @site = site
-    @store = {
-      "beforeGenerating": [],
-      "afterGenerating": []
-    }
     @getUrl = getUrlFn(
       @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
     )
     @getAbsPath = getAbsPathFn(@site["siteConfig"]["rootDir"])
-
-  # fn: param site, change site.
-  register: (type, fn) =>
-    if type not of @store
-      throw new TypeError("type must be a String in #{Object.keys(@store)}!")
-      return
-    if fn not instanceof Function
-      throw new TypeError("fn must be a Function!")
-      return
-    @store[type].push(fn)
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -155,7 +142,7 @@ class Router
       @renderer.render(page)
     ))
 
-  generateData: (p) =>
+  processData: (p) =>
     lang = p["language"] or @site["siteConfig"]["language"]
     if lang not of @translator.list()
       try
@@ -170,7 +157,7 @@ class Router
           @logger.info(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    p = @generator.generate(p, @site["posts"], {
+    return await @processer.process(p, @site["posts"], @site["templates"], {
       "site": @site,
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],
@@ -182,29 +169,26 @@ class Router
       ),
       "__": @translator.getTranslateFn(lang)
     })
-    if p not instanceof Array
-      return [p]
-    return p
 
-  generatePosts: () =>
+  processPosts: () =>
     @site["posts"].sort(dateStrCompare)
-    generated = []
+    processed = []
     for p in @site["posts"]
-      p = @generateData(p)
-      generated = generated.concat(p)
-    @site["posts"] = generated
+      p = await @processData(p)
+      processed = processed.concat(p)
+    @site["posts"] = processed
     for i in [0...@site["posts"].length]
       if i > 0
         @site["posts"][i]["next"] = @site["posts"][i - 1]
       if i < @site["posts"].length - 1
         @site["posts"][i]["prev"] = @site["posts"][i + 1]
 
-  generatePages: () =>
-    generated = []
+  processPages: () =>
+    processed = []
     for p in @site["pages"]
-      p = @generateData(p)
-      generated = generated.concat(p)
-    @site["pages"] = generated
+      p = await @processData(p)
+      processed = processed.concat(p)
+    @site["pages"] = processed
 
   saveAssets: () =>
     return @site["assets"].map((asset) =>
@@ -214,19 +198,13 @@ class Router
 
   savePosts: () =>
     return @site["posts"].map((post) =>
-      @site["templates"][post["layout"]]["content"](post).then((content) =>
-        post["content"] = content
-        return @writeData(@site["srcDir"], post)
-      )
+      @writeData(post["srcDir"], post)
       return post
     )
 
   savePages: () =>
     return @site["pages"].map((page) =>
-      @site["templates"][page["layout"]]["content"](page).then((content) =>
-        page["content"] = content
-        return @writeData(@site["srcDir"], page)
-      )
+      @writeData(page["srcDir"], page)
       return page
     )
 
@@ -255,17 +233,14 @@ class Router
         @renderPosts()
       ])
     ).then(() =>
-      for fn in @store["beforeGenerating"]
-        @site = fn(@site)
-      @generatePosts()
-      @generatePages()
-      for fn in @store["afterGenerating"]
-        @site = fn(@site)
-      return Promise.all([
-        @savePosts(),
-        @savePages(),
-        @saveData()
-      ])
+      @site = await @generator.generate("beforeProcessing", @site)
+      # processPages() needs to wait for processed posts.
+      await @processPosts()
+      await @processPages()
+      @site = await @generator.generate("afterProcessing", @site)
+      @savePosts()
+      @savePages()
+      @saveData()
     ).catch((err) =>
       @logger.info("Hikaru catched some error during generating!")
       @logger.error(err)

@@ -5,7 +5,7 @@ module.exports =
 class Renderer
   constructor: (logger, skipRenderList) ->
     @logger = logger
-    @store = {}
+    @_ = {}
     @skipRenderList = skipRenderList or []
 
   # fn: param data, ctx, return Promise
@@ -15,14 +15,14 @@ class Renderer
       return
     if srcExt instanceof Array
       for s in srcExt
-        @store[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
+        @_[s] = {"srcExt": s, "docExt": docExt, "fn": fn}
       return
-    @store[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
+    @_[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
 
   render: (data, ctx) =>
     srcExt = path.extname(data["srcPath"])
-    if srcExt of @store and data["srcPath"] not in @skipRenderList
-      docExt = @store[srcExt]["docExt"]
+    if srcExt of @_ and data["srcPath"] not in @skipRenderList
+      docExt = @_[srcExt]["docExt"]
       if docExt?
         dirname = path.dirname(data["srcPath"])
         basename = path.basename(data["srcPath"], srcExt)
@@ -37,7 +37,7 @@ class Renderer
         @logger.debug("Hikaru is rendering `#{colors.cyan(
           data["srcPath"]
         )}`...")
-      return @store[srcExt]["fn"](data, ctx)
+      return @_[srcExt]["fn"](data, ctx)
     return new Promise((resolve, reject) =>
       try
         data["docPath"] = data["srcPath"]

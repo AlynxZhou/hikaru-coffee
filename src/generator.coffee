@@ -1,22 +1,38 @@
+colors = require("colors/safe")
+
 module.exports =
 class Generator
   constructor: (logger) ->
     @logger = logger
-    @store = {}
+    @_ = {
+      "beforeProcessing": [],
+      "afterProcessing": []
+    }
 
-  # fn: param page, pages, ctx, return Promise
-  register: (layout, fn) =>
+  # fn: param site, change site.
+  register: (type, fn) =>
     if fn not instanceof Function
       throw new TypeError("fn must be a Function!")
       return
-    if layout instanceof Array
-      for l in layout
-        @store[l] = {"layout": l, "fn": fn}
+    if type instanceof Array
+      for t in type
+        if type not of @_
+          throw new TypeError(
+            "type must be a String in #{Object.keys(@_)}!"
+          )
+          continue
+        @_[t].push(fn)
       return
-    @store[layout] = {"layout": layout, "fn": fn}
+    if type not of @_
+      throw new TypeError("type must be a String in #{Object.keys(@_)}!")
+      return
+    @_[type].push(fn)
 
-  generate: (page, posts, ctx) =>
-    layout = page["layout"] or "page"
-    if layout of @store
-      return @store[layout]["fn"](page, posts, ctx)
-    return page
+  generate: (type, site) =>
+    if type not of @_
+      throw new TypeError("type must be a String in #{Object.keys(@_)}!")
+      return
+    @logger.debug("Hikaru is generating `#{colors.blue(type)}`...")
+    for fn in @_[type]
+      site = await fn(site)
+    return site

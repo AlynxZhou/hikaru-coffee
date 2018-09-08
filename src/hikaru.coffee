@@ -5,6 +5,7 @@ glob = require("glob")
 cheerio = require("cheerio")
 moment = require("moment")
 colors = require("colors/safe")
+Promise = require("bluebird")
 
 yaml = require("js-yaml")
 nunjucks = require("nunjucks")
@@ -16,6 +17,7 @@ coffee = require("coffeescript")
 highlight = require("./highlight")
 Logger = require("./logger")
 Renderer = require("./renderer")
+Processer = require("./processer")
 Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
@@ -45,49 +47,44 @@ class Hikaru
       @logger.debug("Hikaru is copying `#{colors.cyan(
         configPath or path.join(workDir, "config.yml")
       )}`.")
-      return fse.copy(
-        path.join(__dirname, "..", "dist", "config.yml"),
-        configPath or path.join(workDir, "config.yml")
-      )
-    ).then(() =>
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "src", path.sep)
       )}`.")
-      return fse.mkdirp(path.join(workDir, "src"))
-    ).then(() =>
-      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-        workDir, "src", "archives", "index.md"
-      ))}`.")
-      return fse.copy(
-        path.join(__dirname, "..", "dist", "archives.md"),
-        path.join(workDir, "src", "archives", "index.md")
-      )
-    ).then(() =>
-      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-        workDir, "src", "categories", "index.md"
-      ))}`.")
-      return fse.copy(
-        path.join(__dirname, "..", "dist", "categories.md"),
-        path.join(workDir, "src", "categories", "index.md")
-      )
-    ).then(() =>
-      @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-        workDir, "src", "tags", "index.md"
-      ))}`.")
-      return fse.copy(
-        path.join(__dirname, "..", "dist", "tags.md"),
-        path.join(workDir, "src", "tags", "index.md")
-      )
-    ).then(() =>
       @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
         workDir, "doc", path.sep
       ))}`.")
-      return fse.mkdirp(path.join(workDir, "doc"))
-    ).then(() =>
       @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
         workDir, "themes", path.sep
       ))}`.")
-      return fse.mkdirp(path.join(workDir, "themes"))
+      fse.copy(
+        path.join(__dirname, "..", "dist", "config.yml"),
+        configPath or path.join(workDir, "config.yml")
+      )
+      fse.mkdirp(path.join(workDir, "src")).then(() =>
+        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+          workDir, "src", "archives", "index.md"
+        ))}`.")
+        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+          workDir, "src", "categories", "index.md"
+        ))}`.")
+        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+          workDir, "src", "tags", "index.md"
+        ))}`.")
+        fse.copy(
+          path.join(__dirname, "..", "dist", "archives.md"),
+          path.join(workDir, "src", "archives", "index.md")
+        )
+        fse.copy(
+          path.join(__dirname, "..", "dist", "categories.md"),
+          path.join(workDir, "src", "categories", "index.md")
+        )
+        fse.copy(
+          path.join(__dirname, "..", "dist", "tags.md"),
+          path.join(workDir, "src", "tags", "index.md")
+        )
+      )
+      fse.mkdirp(path.join(workDir, "doc"))
+      fse.mkdirp(path.join(workDir, "themes"))
     ).catch((err) =>
       @logger.info("Hikaru catched some error during initializing!")
       @logger.error(err)
@@ -96,37 +93,47 @@ class Hikaru
   clean: (workDir = ".", configPath) =>
     configPath = configPath or path.join(workDir, "config.yml")
     siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-    if siteConfig?["docDir"]?
-      glob("*", {
-        "cwd": path.join(workDir, siteConfig["docDir"])
-      }, (err, res) =>
-        if err
-          return err
-        for r in res then do (r) =>
-          fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>
-            if stats.isDirectory()
-              @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
-                workDir, siteConfig["docDir"], r, path.sep
-              ))}`.")
-            else
-              @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
-                workDir, siteConfig["docDir"], r
-              ))}`.")
-            return fse.remove(path.join(workDir, siteConfig["docDir"], r))
-          ).catch((err) =>
-            @logger.info("Hikaru catched some error during cleaning!")
-            @logger.error(err)
-          )
+    if not siteConfig?["docDir"]?
+      return
+    glob("*", {
+      "cwd": path.join(workDir, siteConfig["docDir"])
+    }, (err, res) =>
+      if err
+        return err
+      return res.map((r) =>
+        fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>
+          if stats.isDirectory()
+            @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
+              workDir, siteConfig["docDir"], r, path.sep
+            ))}`.")
+          else
+            @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
+              workDir, siteConfig["docDir"], r
+            ))}`.")
+          return fse.remove(path.join(workDir, siteConfig["docDir"], r))
+        ).catch((err) =>
+          @logger.info("Hikaru catched some error during cleaning!")
+          @logger.error(err)
+        )
       )
+    )
 
   generate: (workDir = ".", configPath) =>
     @site = {
-      "workDir": workDir
+      "workDir": workDir,
+      "siteConfig": {},
+      "themeConfig": {},
       "templates": {},
       "assets": [],
       "pages": [],
       "posts": [],
-      "data": []
+      "data": [],
+      "categories": [],
+      # Flattend categories length.
+      "categoriesLength": 0,
+      "tags": [],
+      # Flattend tags length.
+      "tagsLength": 0
     }
     configPath = configPath or path.join(@site["workDir"], "config.yml")
     try
@@ -152,8 +159,8 @@ class Hikaru
     catch err
       if err["code"] is "ENOENT"
         @logger.info("Hikaru continues with a empty theme config...")
-        @site["themeConfig"] = {}
     @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
+    @processer = new Processer(@logger)
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
     try
@@ -166,11 +173,13 @@ class Hikaru
     catch err
       if err["code"] is "ENOENT"
         @logger.info("Hikaru cannot find default language file in your theme.")
-    @router = new Router(@logger, @renderer, @generator, @translator, @site)
+    @router = new Router(
+      @logger, @renderer, @processer, @generator, @translator, @site
+    )
     try
       @registerInternalRenderers()
+      @registerInternalProcessers()
       @registerInternalGenerators()
-      @registerInternalRoutes()
     catch err
       @logger.info("Hikaru cannot register internal functions!")
       @logger.error(err)
@@ -183,16 +192,22 @@ class Hikaru
     )
     njkEnv = nunjucks.configure(@site["themeSrcDir"], njkConfig)
     @renderer.register([".njk", ".j2"], null, (data, ctx) ->
-      # For template you must give a render function.
-      template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
-      data["content"] = (ctx) ->
-        return new Promise((resolve, reject) ->
-          template.render(ctx, (err, res) ->
-            if err
-              return reject(err)
-            return resolve(res)
-          )
-        )
+      return new Promise((resolve, reject) ->
+        try
+          template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
+          # For template you must give a render function.
+          data["content"] = (ctx) ->
+            return new Promise((resolve, reject) ->
+              template.render(ctx, (err, res) ->
+                if err
+                  return reject(err)
+                return resolve(res)
+              )
+            )
+          return resolve(data)
+        catch err
+          return reject(err)
+      )
     )
 
     markedConfig = Object.assign(
@@ -273,236 +288,273 @@ class Hikaru
         )
       )
     )
-    # TODO: CoffeeScript render.
-    @renderer.register(".coffee", ".js", (data, ctx) ->)
+
+    coffeeConfig = @site["siteConfig"]["coffee"] or {}
+    @renderer.register(".coffee", ".js", (data, ctx) ->
+      return new Promise((resolve, reject) ->
+        try
+          data["content"] = coffee.compile(data["text"], coffeeConfig)
+          return resolve(data)
+        catch err
+          return reject(err)
+      )
+    )
+
+  registerInternalProcessers: () =>
+    @processer.register("index", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
+        try
+          posts.sort(dateStrCompare)
+          return resolve(paginate(
+            page, posts, ctx, @site["siteConfig"]["perPage"])
+          )
+        catch err
+          return reject(err)
+      )
+    )
+
+    @processer.register("archives", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
+        try
+          posts.sort(dateStrCompare)
+          return resolve(paginate(page, posts, ctx,
+          @site["siteConfig"]["perPage"]))
+        catch err
+          return reject(err)
+      )
+    )
+
+    @processer.register("categories", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
+        try
+          results = []
+          for sub in ctx["site"]["categories"]
+            results = results.concat(paginateCategories(
+              sub,
+              page,
+              path.dirname(page["docPath"]),
+              @site["siteConfig"]["perPage"],
+              ctx
+            ))
+          results.push(Object.assign({}, page, ctx, {
+            "categories": ctx["site"]["categories"]
+          }))
+          return resolve(results)
+        catch err
+          return reject(err)
+      )
+    )
+
+    @processer.register("tags", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
+        try
+          results = []
+          for tag in ctx["site"]["tags"]
+            p = Object.assign({}, page)
+            p["layout"] = "tag"
+            p["docPath"] = path.join(
+              path.dirname(page["docPath"]), "#{tag["name"]}", "index.html"
+            )
+            tag["docPath"] = p["docPath"]
+            p["title"] = "tag"
+            p["name"] = tag["name"].toString()
+            results = results.concat(paginate(p, tag["posts"],
+            ctx, @site["siteConfig"]["perPage"]))
+          results.push(Object.assign({}, page, ctx, {
+            "tags": ctx["site"]["tags"]
+          }))
+          return resolve(results)
+        catch err
+          return reject(err)
+      )
+    )
+
+    @processer.register(["post", "page"], (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
+        try
+          $ = cheerio.load(page["content"])
+          # TOC generate.
+          hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
+          headings = $(hNames.join(", "))
+          toc = []
+          for h in headings
+            level = toc
+            while level.length > 0 and
+            hNames.indexOf(level[level.length - 1]["name"]) <
+            hNames.indexOf(h["name"])
+              level = level[level.length - 1]["subs"]
+            level.push({
+              "id": $(h).attr("id"),
+              "name": h["name"]
+              "text": $(h).text().trim(),
+              "subs": []
+            })
+          # Replace relative path to absolute path.
+          getUrl = getUrlFn(
+            @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
+          )
+          links = $("a")
+          for a in links
+            href = $(a).attr("href")
+            if new URL(
+              href, @site["siteConfig"]["baseUrl"]
+            ).host isnt getUrl().host
+              $(a).attr("target", "_blank")
+            if href.startsWith("https://") or href.startsWith("http://") or
+            href.startsWith("//") or href.startsWith("/") or
+            href.startsWith("#")
+              continue
+            $(a).attr("href", path.posix.join(path.posix.sep,
+            path.posix.dirname(page["docPath"]), href))
+          imgs = $("img")
+          for i in imgs
+            src = $(i).attr("src")
+            if src.startsWith("https://") or src.startsWith("http://") or
+            src.startsWith("//") or src.startsWith("/") or
+            src.startsWith("data:image")
+              continue
+            $(i).attr("src", path.posix.join(path.posix.sep,
+            path.posix.dirname(page["docPath"]), src))
+          page["content"] = $("body").html()
+          if page["content"].indexOf("<!--more-->") isnt -1
+            split = page["content"].split("<!--more-->")
+            page["excerpt"] = split[0]
+            page["more"] = split[1]
+          return resolve(Object.assign({}, page, ctx, {"toc": toc, "$": $}))
+        catch err
+          return reject(err)
+      )
+    )
 
   registerInternalGenerators: () =>
-    @generator.register("index", (page, posts, ctx) =>
-      posts.sort(dateStrCompare)
-      return paginate(page, posts, ctx, @site["siteConfig"]["perPage"])
-    )
-
-    @generator.register("archives", (page, posts, ctx) =>
-      posts.sort(dateStrCompare)
-      return paginate(page, posts, ctx, @site["siteConfig"]["perPage"])
-    )
-
-    @generator.register("categories", (page, posts, ctx) =>
-      results = []
-      for sub in ctx["site"]["categories"]
-        results = results.concat(paginateCategories(
-          sub,
-          page,
-          path.dirname(page["docPath"]),
-          @site["siteConfig"]["perPage"],
-          ctx
-        ))
-      results.push(Object.assign({}, page, ctx, {
-        "categories": ctx["site"]["categories"]
-      }))
-      return results
-    )
-
-    @generator.register("tags", (page, posts, ctx) =>
-      results = []
-      for tag in ctx["site"]["tags"]
-        p = Object.assign({}, page)
-        p["layout"] = "tag"
-        p["docPath"] = path.join(path.dirname(page["docPath"]),
-        "#{tag["name"]}", "index.html")
-        tag["docPath"] = p["docPath"]
-        p["title"] = "tag"
-        p["name"] = tag["name"].toString()
-        results = results.concat(paginate(p, tag["posts"],
-        ctx, @site["siteConfig"]["perPage"]))
-      results.push(Object.assign({}, page, ctx, {
-        "tags": ctx["site"]["tags"]
-      }))
-      return results
-    )
-
-    @generator.register(["post", "page"], (page, posts, ctx) =>
-      $ = cheerio.load(page["content"])
-      # TOC generate.
-      hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
-      headings = $(hNames.join(", "))
-      toc = []
-      for h in headings
-        level = toc
-        while level.length > 0 and
-        hNames.indexOf(level[level.length - 1]["name"]) <
-        hNames.indexOf(h["name"])
-          level = level[level.length - 1]["subs"]
-        level.push({
-          "id": $(h).attr("id"),
-          "name": h["name"]
-          "text": $(h).text().trim(),
-          "subs": []
-        })
-      # Replace relative path to absolute path.
-      getUrl = getUrlFn(
-        @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
-      )
-      links = $("a")
-      for a in links
-        href = $(a).attr("href")
-        if new URL(href, @site["siteConfig"]["baseUrl"]).host isnt getUrl().host
-          $(a).attr("target", "_blank")
-        if href.startsWith("https://") or href.startsWith("http://") or
-        href.startsWith("//") or href.startsWith("/") or
-        href.startsWith("#")
-          continue
-        $(a).attr("href", path.posix.join(path.posix.sep,
-        path.posix.dirname(page["docPath"]), href))
-      imgs = $("img")
-      for i in imgs
-        src = $(i).attr("src")
-        if src.startsWith("https://") or src.startsWith("http://") or
-        src.startsWith("//") or src.startsWith("/") or
-        src.startsWith("data:image")
-          continue
-        $(i).attr("src", path.posix.join(path.posix.sep,
-        path.posix.dirname(page["docPath"]), src))
-      page["content"] = $("body").html()
-      if page["content"].indexOf("<!--more-->") isnt -1
-        split = page["content"].split("<!--more-->")
-        page["excerpt"] = split[0]
-        page["more"] = split[1]
-      return Object.assign({}, page, ctx, {"toc": toc})
-    )
-
-  registerInternalRoutes: () =>
-    @router.register("beforeGenerating", (site) ->
+    @generator.register("beforeProcessing", (site) ->
       # Generate categories
-      ###
-      [
-        {
-          "name"：String,
-          "posts": [Post],
-          "subs": [
-            {
-              "name": String,
-              "posts": [Post],
-              "subs": []
-            }
-          ]
-        }
-      ]
-      ###
-      categories = []
-      categoriesLength = 0
-      for post in site["posts"]
-        if not post["categories"]?
-          continue
-        postCategories = []
-        subCategories = categories
-        for cateName in post["categories"]
-          found = false
-          for category in subCategories
-            if category["name"] is cateName
-              found = true
-              postCategories.push(category)
-              category["posts"].push(post)
-              subCategories = category["subs"]
-              break
-          if not found
-            newCate = {"name": cateName, "posts": [post], "subs": []}
-            ++categoriesLength
-            postCategories.push(newCate)
-            subCategories.push(newCate)
-            subCategories = newCate["subs"]
-        post["categories"] = postCategories
-      categories.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
+      return new Promise((resolve, reject) ->
+        try
+          categories = []
+          categoriesLength = 0
+          for post in site["posts"]
+            if not post["categories"]?
+              continue
+            postCategories = []
+            subCategories = categories
+            for cateName in post["categories"]
+              found = false
+              for category in subCategories
+                if category["name"] is cateName
+                  found = true
+                  postCategories.push(category)
+                  category["posts"].push(post)
+                  subCategories = category["subs"]
+                  break
+              if not found
+                newCate = {"name": cateName, "posts": [post], "subs": []}
+                ++categoriesLength
+                postCategories.push(newCate)
+                subCategories.push(newCate)
+                subCategories = newCate["subs"]
+            post["categories"] = postCategories
+          categories.sort((a, b) ->
+            return a["name"].localeCompare(b["name"])
+          )
+          for sub in categories
+            sortCategories(sub)
+          site["categories"] = categories
+          site["categoriesLength"] = categoriesLength
+          return resolve(site)
+        catch err
+          return reject(err)
       )
-      for sub in categories
-        sortCategories(sub)
-      site["categories"] = categories
-      site["categoriesLength"] = categoriesLength
-      return site
     )
 
-    @router.register("beforeGenerating", (site) ->
+    @generator.register("beforeProcessing", (site) ->
       # Generate tags.
-      ###
-      [
-        {
-          "name": String,
-          "posts": [Post]
-        }
-      ]
-      ###
-      tags = []
-      tagsLength = 0
-      for post in site["posts"]
-        if not post["tags"]?
-          continue
-        postTags = []
-        for tagName in post["tags"]
-          found = false
+      return new Promise((resolve, reject) ->
+        try
+          tags = []
+          tagsLength = 0
+          for post in site["posts"]
+            if not post["tags"]?
+              continue
+            postTags = []
+            for tagName in post["tags"]
+              found = false
+              for tag in tags
+                if tag["name"] is tagName
+                  found = true
+                  postTags.push(tag)
+                  tag["posts"].push(post)
+                  break
+              if not found
+                newTag = {"name": tagName, "posts": [post]}
+                ++tagsLength
+                postTags.push(newTag)
+                tags.push(newTag)
+            post["tags"] = postTags
+          tags.sort((a, b) ->
+            return a["name"].localeCompare(b["name"])
+          )
           for tag in tags
-            if tag["name"] is tagName
-              found = true
-              postTags.push(tag)
-              tag["posts"].push(post)
-              break
-          if not found
-            newTag = {"name": tagName, "posts": [post]}
-            ++tagsLength
-            postTags.push(newTag)
-            tags.push(newTag)
-        post["tags"] = postTags
-      tags.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
+            tag["posts"].sort(dateStrCompare)
+          site["tags"] = tags
+          site["tagsLength"] = tagsLength
+          return resolve(site)
+        catch err
+          return reject(err)
       )
-      for tag in tags
-        tag["posts"].sort(dateStrCompare)
-      site["tags"] = tags
-      site["tagsLength"] = tagsLength
-      return site
     )
 
-    @router.register("afterGenerating", (site) ->
-      if not site["siteConfig"]["search"]["enable"]
-        return site
-      # Generate search index.
-      search = []
-      all = site["pages"].concat(site["posts"])
-      getAbsPath = getAbsPathFn(site["siteConfig"]["rootDir"])
-      for p in all
-        search.push({
-          "title": "#{p["title"]}",
-          "url": getAbsPath(p["docPath"]),
-          "content": p["text"]
-        })
-      site["data"].push({
-        "docPath": site["siteConfig"]["search"]["path"] or "search.json",
-        "content": JSON.stringify(search)
-      })
-      return site
+    @generator.register("afterProcessing", (site) ->
+      return new Promise((resolve, reject) ->
+        try
+          if not site["siteConfig"]["search"]["enable"]
+            return resolve(site)
+          # Generate search index.
+          search = []
+          all = site["pages"].concat(site["posts"])
+          getAbsPath = getAbsPathFn(site["siteConfig"]["rootDir"])
+          for p in all
+            search.push({
+              "title": "#{p["title"]}",
+              "url": getAbsPath(p["docPath"]),
+              "content": p["text"]
+            })
+          site["data"].push({
+            "docPath": site["siteConfig"]["search"]["path"] or "search.json",
+            "content": JSON.stringify(search)
+          })
+          return resolve(site)
+        catch err
+          return reject(err)
+      )
     )
 
-    @router.register("afterGenerating", (site) ->
-      if not site["siteConfig"]["feed"]["enable"]
-        return site
-      # Generate RSS feed.
-      tmpContent = fse.readFileSync(path.join(
-        __dirname, "..", "dist", "atom.njk"
-      ), "utf8")
-      content = nunjucks.renderString(tmpContent, {
-        "site": site,
-        "siteConfig": site["siteConfig"],
-        "themeConfig": site["themeConfig"],
-        "posts": site["posts"],
-        "moment": moment,
-        "removeControlChars": removeControlChars,
-        "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
-        site["siteConfig"]["rootDir"]),
-        "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
-      })
-      site["data"].push({
-        "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
-        "content": content
-      })
-      return site
+    @generator.register("afterProcessing", (site) ->
+      return new Promise((resolve, reject) ->
+        try
+          if not site["siteConfig"]["feed"]["enable"]
+            return resolve(site)
+          # Generate RSS feed.
+          tmpContent = fse.readFileSync(path.join(
+            __dirname, "..", "dist", "atom.njk"
+          ), "utf8")
+          content = nunjucks.renderString(tmpContent, {
+            "site": site,
+            "siteConfig": site["siteConfig"],
+            "themeConfig": site["themeConfig"],
+            "posts": site["posts"],
+            "moment": moment,
+            "removeControlChars": removeControlChars,
+            "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
+            site["siteConfig"]["rootDir"]),
+            "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
+          })
+          site["data"].push({
+            "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
+            "content": content
+          })
+          return resolve(site)
+        catch err
+          return reject(err)
+      )
     )
