@@ -81,12 +81,12 @@ getUrlFn = (baseUrl, rootDir = path.posix.sep) ->
 isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
   # Must join a "/" before resolve or it will join current work dir.
   getAbsPath = getAbsPathFn(rootDir)
-  currentPath = getAbsPath(currentPath).toLowerCase()
+  currentPath = getAbsPath(currentPath)
   currentToken = path.posix.resolve(path.posix.join(
     path.posix.sep, currentPath.replace(path.win32.sep, path.posix.sep)
   )).split(path.posix.sep)
   return (testPath = "", strict = false) ->
-    testPath = getAbsPath(testPath).toLowerCase()
+    testPath = getAbsPath(testPath)
     if currentPath is testPath
       return true
     testToken = path.posix.resolve(path.posix.join(

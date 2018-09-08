@@ -476,7 +476,6 @@ class Hikaru
           "content": p["text"]
         })
       site["data"].push({
-        # "srcPath": site["siteConfig"]["search"]["path"] or "search.json",
         "docPath": site["siteConfig"]["search"]["path"] or "search.json",
         "content": JSON.stringify(search)
       })
@@ -502,7 +501,6 @@ class Hikaru
         "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
       })
       site["data"].push({
-        # "srcPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
         "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
         "content": content
       })
