@@ -25,7 +25,6 @@ Router = require("./router")
   escapeHTML,
   removeControlChars,
   paginate,
-  dateStrCompare,
   sortCategories,
   paginateCategories,
   getAbsPathFn,
@@ -304,7 +303,9 @@ class Hikaru
     @processer.register("index", (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          posts.sort(dateStrCompare)
+          posts.sort((a, b) ->
+            return -(a["date"] - b["date"])
+          )
           return resolve(paginate(
             p, posts, ctx, @site["siteConfig"]["perPage"])
           )
@@ -316,7 +317,9 @@ class Hikaru
     @processer.register("archives", (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          posts.sort(dateStrCompare)
+          posts.sort((a, b) ->
+            return -(a["date"] - b["date"])
+          )
           return resolve(paginate(
             p, posts, ctx, @site["siteConfig"]["perPage"]
           ))
@@ -497,7 +500,9 @@ class Hikaru
             return a["name"].localeCompare(b["name"])
           )
           for tag in tags
-            tag["posts"].sort(dateStrCompare)
+            tag["posts"].sort((a, b) ->
+              return -(a["date"] - b["date"])
+            )
           site["tags"] = tags
           site["tagsLength"] = tagsLength
           return resolve(site)

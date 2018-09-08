@@ -37,11 +37,10 @@ paginate = (p, posts, ctx, perPage) ->
     )
   return results
 
-dateStrCompare = (a, b) ->
-  return -(new Date(a["date"]) - new Date(b["date"]))
-
 sortCategories = (category) ->
-  category["posts"].sort(dateStrCompare)
+  category["posts"].sort((a, b) ->
+    return -(a["date"] - b["date"])
+  )
   category["subs"].sort((a, b) ->
     return a["name"].localeCompare(b["name"])
   )
@@ -106,7 +105,6 @@ module.exports = {
   "escapeHTML": escapeHTML,
   "removeControlChars": removeControlChars,
   "paginate": paginate,
-  "dateStrCompare": dateStrCompare,
   "sortCategories": sortCategories,
   "paginateCategories": paginateCategories,
   "getAbsPathFn": getAbsPathFn,

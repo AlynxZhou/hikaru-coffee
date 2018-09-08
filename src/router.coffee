@@ -7,7 +7,6 @@ colors = require("colors/safe")
 moment = require("moment")
 
 {
-  dateStrCompare,
   getAbsPathFn,
   getUrlFn,
   isCurrentPathFn
@@ -106,6 +105,15 @@ class Router
             parsed = fm(data["raw"])
             data["text"] = parsed["body"]
             data = Object.assign(data, parsed["attributes"])
+            if data["date"]?
+              # Fix js-yaml's bug that ignore timezone while parsing.
+              # https://github.com/nodeca/js-yaml/issues/91
+              data["date"] = new Date(
+                data["date"].getTime() +
+                data["date"].getTimezoneOffset() * 60000
+              )
+            else
+              data["date"] = new Date()
             if data["text"] isnt data["raw"]
               if data["title"]?
                 data["title"] = data["title"].toString()
@@ -174,7 +182,9 @@ class Router
     return ps
 
   processPosts: () =>
-    @site["posts"].sort(dateStrCompare)
+    @site["posts"].sort((a, b) ->
+      return -(a["date"] - b["date"])
+    )
     processed = []
     for p in @site["posts"]
       p = await @processP(p)
