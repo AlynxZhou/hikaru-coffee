@@ -165,7 +165,7 @@ class Router
           @logger.info(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    ps = await @processer.process(p, @site["posts"], @site["templates"], {
+    ps = await @processer.process(p, @site["posts"], {
       "site": @site,
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],

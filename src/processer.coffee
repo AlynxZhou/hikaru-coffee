@@ -13,14 +13,25 @@ class Processer
       return
     if layout instanceof Array
       for l in layout
-        @_[l] = {"layout": l, "fn": fn}
+        if l not of @_
+          @_[l] = []
+        @_[l].push(fn)
       return
-    @_[layout] = {"layout": layout, "fn": fn}
+    if layout not of @_
+      @_[layout] = []
+    @_[layout].push(fn)
 
-  process: (p, posts, templates, ctx) =>
+  process: (p, posts, ctx) =>
     @logger.debug(
       "Hikaru is processing `#{colors.cyan(p["docPath"])}`..."
     )
     if p["layout"] of @_
-      return @_[p["layout"]]["fn"](p, posts, ctx)
+      results = []
+      for fn in @_[p["layout"]] then do (fn) ->
+        res = await fn(p, posts, ctx)
+        if res instanceof Array
+          results = results.concat(res)
+        else
+          results.push(res)
+      return results
     return Object.assign({}, p, ctx)
