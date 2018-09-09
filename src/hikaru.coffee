@@ -377,7 +377,7 @@ class Hikaru
     @processer.register(["post", "page"], (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          $ = cheerio.load(p["content"])
+          $ = cheerio.load(p["content"], {"decodeEntities": false})
           # TOC generate.
           hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
           headings = $(hNames.join(", "))
