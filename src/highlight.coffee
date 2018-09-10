@@ -41,17 +41,16 @@ highlight = (str, options = {}) ->
     data = hljs.highlight(options["lang"], str)
 
   results = [
-    "<figure class=\"highlight hljs #{data["language"].toLowerCase()}\">",
-    "<table><tr>"
+    "<figure class=\"highlight hljs #{data["language"].toLowerCase()}\">"
   ]
   if options["gutter"]
-    gutters = ["<td class=\"gutter\"><pre>"]
+    gutters = ["<pre class=\"gutter\">"]
     lines = data["value"].split("\n").length
     for i in [0...lines]
       gutters.push("<span class=\"line\">#{i + 1}</span>\n")
-    gutters.push("</pre></td>")
+    gutters.push("</pre>")
     results = results.concat(gutters)
-  results.push("<td class=\"code\"><pre><code>")
+  results.push("<pre class=\"code\"><code>")
   results.push(data["value"])
-  results.push("</code></pre></td></tr></table></figure>")
+  results.push("</code></pre></figure>")
   return results.join("")
