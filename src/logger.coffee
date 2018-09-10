@@ -1,16 +1,27 @@
 colors = require("colors/safe")
+Promise = require("bluebird")
 
 module.exports =
-class Logger
-  constructor: (debug) ->
+class Logger extends console.Console
+  constructor: (debug, options = {
+    "stdout": process.stdout,
+    "stderr": process.stderr
+  }) ->
+    super(options)
     @isDebug = debug
 
+  log: (strs...) ->
+    super.log("LOG:", strs...)
+
   info: (strs...) ->
-    console.log(colors.yellow("INFO:"), strs...)
+    super.info(colors.blue("INFO:"), strs...)
 
   debug: (strs...) ->
     if @isDebug
-      console.debug(colors.green("DEBUG:"), strs...)
+      super.debug(colors.green("DEBUG:"), strs...)
+
+  warn: (strs...) ->
+    super.warn(colors.yellow("WARN:"), strs...)
 
   error: (strs...) ->
-    console.log(colors.red("ERROR:"), strs...)
+    super.error(colors.red("ERROR:"), strs...)

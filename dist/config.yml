@@ -7,9 +7,11 @@ language: default
 
 baseUrl: https://yourdomain.com
 rootDir: /
-srcDir: src
-docDir: doc
+srcDir: srcs
+docDir: docs
 themeDir: aria
+categoryDir: categories
+tagDir: tags
 
 perPage: 10
 

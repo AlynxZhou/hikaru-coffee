@@ -1,4 +1,5 @@
-{vsprintf} = require("sprintf-js")
+{format} = require("util")
+Promise = require("bluebird")
 
 module.exports =
 class Translator
@@ -34,10 +35,10 @@ class Translator
         res = res[k]
       if typeof(res) is "string"
         if args.length > 0
-          return vsprintf(res, args)
+          return format(res, args)
         else
           return res
       if args.length > 0
-        return vsprintf(key, args)
+        return format(key, args)
       else
         return key

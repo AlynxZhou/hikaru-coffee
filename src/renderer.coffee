@@ -1,5 +1,6 @@
 path = require("path")
 colors = require("colors/safe")
+Promise = require("bluebird")
 
 module.exports =
 class Renderer

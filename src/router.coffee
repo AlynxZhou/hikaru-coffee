@@ -5,6 +5,7 @@ yaml = require("js-yaml")
 glob = require("glob")
 colors = require("colors/safe")
 moment = require("moment")
+Promise = require("bluebird")
 
 {
   getAbsPathFn,
@@ -162,7 +163,7 @@ class Router
         @translator.register(lang, language)
       catch err
         if err["code"] is "ENOENT"
-          @logger.info(
+          @logger.warn(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
     ps = await @processer.process(p, @site["posts"], {
@@ -236,9 +237,9 @@ class Router
       @renderAssets().then(() =>
         return @saveAssets()
       ).catch((err) =>
-        @logger.info("Hikaru catched some error during generating!")
+        @logger.warn("Hikaru catched some error during generating!")
         @logger.error(err)
-        @logger.info("Hikaru advise you to check generating files!")
+        @logger.warn("Hikaru advise you to check generating files!")
       )
       return Promise.all([
         @renderTemplates(),
@@ -266,7 +267,7 @@ class Router
       @savePages()
       @saveData()
     ).catch((err) =>
-      @logger.info("Hikaru catched some error during generating!")
+      @logger.warn("Hikaru catched some error during generating!")
       @logger.error(err)
-      @logger.info("Hikaru advise you to check generating files!")
+      @logger.warn("Hikaru advise you to check generating files!")
     )

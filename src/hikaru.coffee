@@ -85,7 +85,7 @@ class Hikaru
       fse.mkdirp(path.join(workDir, "doc"))
       fse.mkdirp(path.join(workDir, "themes"))
     ).catch((err) =>
-      @logger.info("Hikaru catched some error during initializing!")
+      @logger.warn("Hikaru catched some error during initializing!")
       @logger.error(err)
     )
 
@@ -111,7 +111,7 @@ class Hikaru
             ))}`.")
           return fse.remove(path.join(workDir, siteConfig["docDir"], r))
         ).catch((err) =>
-          @logger.info("Hikaru catched some error during cleaning!")
+          @logger.warn("Hikaru catched some error during cleaning!")
           @logger.error(err)
         )
       )
@@ -138,26 +138,28 @@ class Hikaru
     try
       @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     catch err
-      @logger.info("Hikaru cannot find site config!")
+      @logger.warn("Hikaru cannot find site config!")
       @logger.error(err)
       process.exit(-1)
     @site["srcDir"] = path.join(
-      @site["workDir"], @site["siteConfig"]["srcDir"]
+      @site["workDir"], @site["siteConfig"]["srcDir"] or "srcs"
     )
     @site["docDir"] = path.join(
-      @site["workDir"], @site["siteConfig"]["docDir"]
+      @site["workDir"], @site["siteConfig"]["docDir"] or "docs"
     )
     @site["themeDir"] = path.join(
       @site["workDir"], "themes", @site["siteConfig"]["themeDir"]
     )
-    @site["themeSrcDir"] = path.join(@site["themeDir"], "src")
+    @site["themeSrcDir"] = path.join(@site["themeDir"], "srcs")
     try
       @site["themeConfig"] = yaml.safeLoad(
         fse.readFileSync(path.join(@site["themeDir"], "config.yml"))
       )
     catch err
       if err["code"] is "ENOENT"
-        @logger.info("Hikaru continues with a empty theme config...")
+        @logger.warn("Hikaru continues with a empty theme config...")
+    @site["categoryDir"] = @site["siteConfig"]["categoryDir"] or "categories"
+    @site["tagDir"] = @site["siteConfig"]["tagDir"] or "tags"
     @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
     @processer = new Processer(@logger)
     @generator = new Generator(@logger)
@@ -171,7 +173,7 @@ class Hikaru
       @translator.register("default", defaultLanguage)
     catch err
       if err["code"] is "ENOENT"
-        @logger.info("Hikaru cannot find default language file in your theme.")
+        @logger.warn("Hikaru cannot find default language file in your theme.")
     @router = new Router(
       @logger, @renderer, @processer, @generator, @translator, @site
     )
@@ -180,7 +182,7 @@ class Hikaru
       @registerInternalProcessers()
       @registerInternalGenerators()
     catch err
-      @logger.info("Hikaru cannot register internal functions!")
+      @logger.warn("Hikaru cannot register internal functions!")
       @logger.error(err)
       process.exit(-2)
     @router.route()
@@ -307,8 +309,8 @@ class Hikaru
             return -(a["date"] - b["date"])
           )
           return resolve(paginate(
-            p, posts, ctx, @site["siteConfig"]["perPage"])
-          )
+            p, posts, @site["siteConfig"]["perPage"], ctx
+          ))
         catch err
           return reject(err)
       )
@@ -321,54 +323,30 @@ class Hikaru
             return -(a["date"] - b["date"])
           )
           return resolve(paginate(
-            p, posts, ctx, @site["siteConfig"]["perPage"]
+            p, posts, @site["siteConfig"]["perPage"], ctx
           ))
         catch err
           return reject(err)
       )
     )
 
-    @processer.register("categories", (p, posts, ctx) =>
-      return new Promise((resolve, reject) =>
+    @processer.register("categories", (p, posts, ctx) ->
+      return new Promise((resolve, reject) ->
         try
-          results = []
-          for sub in ctx["site"]["categories"]
-            results = results.concat(paginateCategories(
-              sub,
-              p,
-              path.dirname(p["docPath"]),
-              @site["siteConfig"]["perPage"],
-              ctx
-            ))
-          results.push(Object.assign({}, p, ctx, {
+          return resolve(Object.assign({}, p, ctx, {
             "categories": ctx["site"]["categories"]
           }))
-          return resolve(results)
         catch err
           return reject(err)
       )
     )
 
-    @processer.register("tags", (p, posts, ctx) =>
-      return new Promise((resolve, reject) =>
+    @processer.register("tags", (p, posts, ctx) ->
+      return new Promise((resolve, reject) ->
         try
-          results = []
-          for tag in ctx["site"]["tags"]
-            sp = Object.assign({}, p)
-            sp["layout"] = "tag"
-            sp["docPath"] = path.join(
-              path.dirname(sp["docPath"]), "#{tag["name"]}", "index.html"
-            )
-            tag["docPath"] = sp["docPath"]
-            sp["title"] = "tag"
-            sp["name"] = tag["name"].toString()
-            results = results.concat(paginate(
-              sp, tag["posts"], ctx, @site["siteConfig"]["perPage"]
-            ))
-          results.push(Object.assign({}, p, ctx, {
+          return resolve(Object.assign({}, p, ctx, {
             "tags": ctx["site"]["tags"]
           }))
-          return resolve(results)
         catch err
           return reject(err)
       )
@@ -464,6 +442,11 @@ class Hikaru
           )
           for sub in categories
             sortCategories(sub)
+            site["pages"] = site["pages"].concat(paginateCategories(
+              sub,
+              site["categoryDir"],
+              site["siteConfig"]["perPage"]
+            ))
           site["categories"] = categories
           site["categoriesLength"] = categoriesLength
           return resolve(site)
@@ -503,6 +486,18 @@ class Hikaru
             tag["posts"].sort((a, b) ->
               return -(a["date"] - b["date"])
             )
+            sp = {
+              "layout": "tag",
+              "docPath": path.join(
+                site["tagDir"], "#{tag["name"]}", "index.html"
+              ),
+              "title": "tag",
+              "name": tag["name"].toString()
+            }
+            tag["docPath"] = sp["docPath"]
+            site["pages"] = site["pages"].concat(paginate(
+              sp, tag["posts"], site["siteConfig"]["perPage"]
+            ))
           site["tags"] = tags
           site["tagsLength"] = tagsLength
           return resolve(site)

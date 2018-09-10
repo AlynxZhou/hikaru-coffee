@@ -1,5 +1,6 @@
 path = require("path")
 {URL} = require("url")
+Promise = require("bluebird")
 
 escapeHTML = (str) ->
   return str
@@ -12,7 +13,7 @@ escapeHTML = (str) ->
 removeControlChars = (str) ->
   return str.replace(/[\x00-\x1F\x7F]/g, "")
 
-paginate = (p, posts, ctx, perPage) ->
+paginate = (p, posts, perPage, ctx) ->
   if not perPage
     perPage = 10
   results = []
@@ -47,18 +48,19 @@ sortCategories = (category) ->
   for sub in category["subs"]
     sortCategories(sub)
 
-paginateCategories = (category, p, parentPath, perPage, ctx) ->
+paginateCategories = (category, parentPath, perPage, ctx) ->
   results = []
-  sp = Object.assign({}, p)
-  sp["layout"] = "category"
-  sp["docPath"] = path.join(parentPath, "#{category["name"]}", "index.html")
+  sp = {
+    "layout": "category",
+    "docPath": path.join(parentPath, "#{category["name"]}", "index.html"),
+    "title": "category",
+    "name": category["name"].toString()
+  }
   category["docPath"] = sp["docPath"]
-  sp["title"] = "category"
-  sp["name"] = category["name"].toString()
-  results = results.concat(paginate(sp, category["posts"], ctx, perPage))
+  results = results.concat(paginate(sp, category["posts"], perPage, ctx))
   for sub in category["subs"]
     results = results.concat(
-      paginateCategories(sub, p, path.join(
+      paginateCategories(sub, path.join(
         parentPath, "#{category["name"]}"
       ), perPage, ctx)
     )

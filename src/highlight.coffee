@@ -1,5 +1,6 @@
 hljs = require("highlight.js")
 {escapeHTML} = require("./utils")
+Promise = require("bluebird")
 
 aliases = null
 
