@@ -18,7 +18,25 @@ perPage: 10
 skipRender:
   - README.md
 
+nunjucks:
+  autoescape: false
+
 marked:
+  gfm: true
+
+stylus:
+  compress: false
+  sourcemaps:
+    comment: true
+    inline: true
+    sourceRoot: ''
+    basePath: .
+
+coffeescript:
+  header: false
+  bare: false
+
+highlight:
   gutter: true
   hljs: true
 

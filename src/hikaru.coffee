@@ -211,41 +211,21 @@ class Hikaru
       )
     )
 
-    markedConfig = Object.assign(
-      {"gfm": true},
-      @site["siteConfig"]["marked"]
-    )
-    headerIds = {}
-    renderer = new marked.Renderer()
-    renderer.heading = (text, level) ->
-      escaped = escapeHTML(text)
-      if headerIds[escaped]
-        id = "#{escaped}-#{headerIds[escaped]++}"
-      else
-        id = escaped
-        headerIds[escaped] = 1
-      return "<h#{level} id=\"#{id}\">" +
-      "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
-      "</a>" +
-      "#{text}" +
-      "</h#{level}>"
-    marked.setOptions({
+    markedConfig = Object.assign({
+      "gfm": true,
       "langPrefix": "",
-      "highlight": (code, lang) ->
-        return highlight(code, {
+      "highlight": (code, lang) =>
+        return highlight(code, Object.assign({
           "lang": lang?.toLowerCase(),
-          "hljs":  markedConfig["hljs"] or true,
-          "gutter": markedConfig["gutter"] or true
-        })
-    })
+          "hljs": true,
+          "gutter": true
+        }, @site["siteConfig"]["highlight"]))
+    }, @site["siteConfig"]["marked"])
+    marked.setOptions(markedConfig)
     @renderer.register(".md", ".html", (data, ctx) ->
       return new Promise((resolve, reject) ->
         try
-          data["content"] = marked(
-            data["text"],
-            Object.assign({"renderer": renderer}, markedConfig)
-          )
-          headerIds = {}
+          data["content"] = marked(data["text"])
           return resolve(data)
         catch err
           return reject(err)
@@ -290,7 +270,7 @@ class Hikaru
       )
     )
 
-    coffeeConfig = @site["siteConfig"]["coffee"] or {}
+    coffeeConfig = @site["siteConfig"]["coffeescript"] or {}
     @renderer.register(".coffee", ".js", (data, ctx) ->
       return new Promise((resolve, reject) ->
         try
@@ -355,40 +335,55 @@ class Hikaru
     @processer.register(["post", "page"], (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
+          getUrl = getUrlFn(
+            @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
+          )
+          getAbsPath = getAbsPathFn(@site["siteConfig"]["rootDir"])
           $ = cheerio.load(p["content"])
           # TOC generate.
           hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
           headings = $(hNames.join(", "))
           toc = []
+          headerIds = {}
           for h in headings
             level = toc
             while level.length > 0 and
             hNames.indexOf(level[level.length - 1]["name"]) <
             hNames.indexOf(h["name"])
               level = level[level.length - 1]["subs"]
+            text = $(h).text()
+            escaped = escapeHTML(text).trim()
+            if headerIds[escaped]
+              id = "#{escaped}-#{headerIds[escaped]++}"
+            else
+              id = escaped
+              headerIds[escaped] = 1
+            $(h).html(
+              "<#{h["name"]} id=\"#{id}\">" +
+              "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
+              "</a>" + "#{text}" + "</#{h["name"]}>"
+            )
             level.push({
-              "id": $(h).attr("id"),
+              "docPath": path.join(path.dirname(p["docPath"]), "##{id}"),
               "name": h["name"]
-              "text": $(h).text().trim(),
+              "text": text.trim(),
               "subs": []
             })
           # Replace relative path to absolute path.
-          getUrl = getUrlFn(
-            @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
-          )
           links = $("a")
           for a in links
             href = $(a).attr("href")
             if new URL(
               href, @site["siteConfig"]["baseUrl"]
-            ).host isnt getUrl().host
+            ).host isnt getUrl(p["docPath"]).host
               $(a).attr("target", "_blank")
             if href.startsWith("https://") or href.startsWith("http://") or
             href.startsWith("//") or href.startsWith("/") or
-            href.startsWith("#")
+            href.startsWith("javascript:")
               continue
-            $(a).attr("href", path.posix.join(path.posix.sep,
-            path.posix.dirname(p["docPath"]), href))
+            $(a).attr("href", getAbsPath(path.join(
+              path.dirname(p["docPath"]), href
+            )))
           imgs = $("img")
           for i in imgs
             src = $(i).attr("src")
@@ -396,8 +391,9 @@ class Hikaru
             src.startsWith("//") or src.startsWith("/") or
             src.startsWith("data:image")
               continue
-            $(i).attr("src", path.posix.join(path.posix.sep,
-            path.posix.dirname(p["docPath"]), src))
+            $(i).attr("src", getAbsPath(path.join(
+              path.dirname(p["docPath"]), src
+            )))
           p["content"] = $("body").html()
           if p["content"].indexOf("<!--more-->") isnt -1
             split = p["content"].split("<!--more-->")
