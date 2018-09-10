@@ -1,6 +1,6 @@
 {
   "name": "hikaru-coffee",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "A static site generator that generates routes based on directories naturally.",
   "main": "lib/index.js",
   "bin": {
