@@ -46,9 +46,6 @@ class Hikaru
       @logger.debug("Hikaru is copying `#{colors.cyan(
         configPath or path.join(workDir, "config.yml")
       )}`.")
-      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
-        workDir, ".hikaru", path.sep
-      ))}`.")
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "src", path.sep)
       )}`.")
@@ -62,7 +59,6 @@ class Hikaru
         path.join(__dirname, "..", "dist", "config.yml"),
         configPath or path.join(workDir, "config.yml")
       )
-      fse.mkdirp(path.join(workDir, ".hikaru"))
       fse.mkdirp(path.join(workDir, "src")).then(() =>
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "src", "archives", "index.md"
@@ -98,10 +94,6 @@ class Hikaru
     siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     if not siteConfig?["docDir"]?
       return
-    fse.emptyDir(path.join(workDir, ".hikaru")).catch((err) =>
-      @logger.warn("Hikaru catched some error during cleaning!")
-      @logger.error(err)
-    )
     glob("*", {
       "cwd": path.join(workDir, siteConfig["docDir"])
     }, (err, res) =>
