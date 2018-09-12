@@ -9,7 +9,7 @@ class Renderer
     @_ = {}
     @skipRenderList = skipRenderList or []
 
-  # fn: param data, ctx, return Promise
+  # fn: param file, ctx, return Promise
   register: (srcExt, docExt, fn) =>
     if fn not instanceof Function
       throw new TypeError("fn must be a Function!")
@@ -20,32 +20,32 @@ class Renderer
       return
     @_[srcExt] = {"srcExt": srcExt, "docExt": docExt, "fn": fn}
 
-  render: (data, ctx) =>
-    srcExt = path.extname(data["srcPath"])
-    if srcExt of @_ and data["srcPath"] not in @skipRenderList
+  render: (file, ctx) =>
+    srcExt = path.extname(file["srcPath"])
+    if srcExt of @_ and file["srcPath"] not in @skipRenderList
       docExt = @_[srcExt]["docExt"]
       if docExt?
-        dirname = path.dirname(data["srcPath"])
-        basename = path.basename(data["srcPath"], srcExt)
-        data["docPath"] = path.join(dirname, "#{basename}#{docExt}")
+        dirname = path.dirname(file["srcPath"])
+        basename = path.basename(file["srcPath"], srcExt)
+        file["docPath"] = path.join(dirname, "#{basename}#{docExt}")
         @logger.debug(
           "Hikaru is rendering `#{colors.cyan(
-            data["srcPath"]
-          )}` to `#{colors.cyan(data["docPath"])}`..."
+            file["srcPath"]
+          )}` to `#{colors.cyan(file["docPath"])}`..."
         )
       else
-        data["docPath"] = data["srcPath"]
+        file["docPath"] = file["srcPath"]
         @logger.debug("Hikaru is rendering `#{colors.cyan(
-          data["srcPath"]
+          file["srcPath"]
         )}`...")
-      return @_[srcExt]["fn"](data, ctx)
+      return @_[srcExt]["fn"](file, ctx)
     return new Promise((resolve, reject) =>
       try
-        data["docPath"] = data["srcPath"]
+        file["docPath"] = file["srcPath"]
         @logger.debug("Hikaru is rendering `#{colors.cyan(
-          data["srcPath"]
+          file["srcPath"]
         )}`...")
-        resolve(data)
+        resolve(file)
       catch err
         reject(err)
     )

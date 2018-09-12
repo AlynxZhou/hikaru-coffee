@@ -46,6 +46,9 @@ class Hikaru
       @logger.debug("Hikaru is copying `#{colors.cyan(
         configPath or path.join(workDir, "config.yml")
       )}`.")
+      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
+        workDir, ".hikaru", path.sep
+      ))}`.")
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "src", path.sep)
       )}`.")
@@ -59,6 +62,7 @@ class Hikaru
         path.join(__dirname, "..", "dist", "config.yml"),
         configPath or path.join(workDir, "config.yml")
       )
+      fse.mkdirp(path.join(workDir, ".hikaru"))
       fse.mkdirp(path.join(workDir, "src")).then(() =>
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "src", "archives", "index.md"
@@ -94,6 +98,10 @@ class Hikaru
     siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     if not siteConfig?["docDir"]?
       return
+    fse.emptyDir(path.join(workDir, ".hikaru")).catch((err) =>
+      @logger.warn("Hikaru catched some error during cleaning!")
+      @logger.error(err)
+    )
     glob("*", {
       "cwd": path.join(workDir, siteConfig["docDir"])
     }, (err, res) =>
@@ -126,7 +134,7 @@ class Hikaru
       "assets": [],
       "pages": [],
       "posts": [],
-      "data": [],
+      "file": [],
       "categories": [],
       # Flattend categories length.
       "categoriesLength": 0,
@@ -192,12 +200,12 @@ class Hikaru
       {"autoescape": false}, @site["siteConfig"]["nunjucks"]
     )
     njkEnv = nunjucks.configure(@site["themeSrcDir"], njkConfig)
-    @renderer.register([".njk", ".j2"], null, (data, ctx) ->
+    @renderer.register([".njk", ".j2"], null, (file, ctx) ->
       return new Promise((resolve, reject) ->
         try
-          template = nunjucks.compile(data["text"], njkEnv, data["srcPath"])
+          template = nunjucks.compile(file["text"], njkEnv, file["srcPath"])
           # For template you must give a render function.
-          data["content"] = (ctx) ->
+          file["content"] = (ctx) ->
             return new Promise((resolve, reject) ->
               template.render(ctx, (err, res) ->
                 if err
@@ -205,7 +213,7 @@ class Hikaru
                 return resolve(res)
               )
             )
-          return resolve(data)
+          return resolve(file)
         catch err
           return reject(err)
       )
@@ -222,24 +230,24 @@ class Hikaru
         }, @site["siteConfig"]["highlight"]))
     }, @site["siteConfig"]["marked"])
     marked.setOptions(markedConfig)
-    @renderer.register(".md", ".html", (data, ctx) ->
+    @renderer.register(".md", ".html", (file, ctx) ->
       return new Promise((resolve, reject) ->
         try
-          data["content"] = marked(data["text"])
-          return resolve(data)
+          file["content"] = marked(file["text"])
+          return resolve(file)
         catch err
           return reject(err)
       )
     )
 
     stylConfig = @site["siteConfig"]["stylus"] or {}
-    @renderer.register(".styl", ".css", (data, ctx) =>
+    @renderer.register(".styl", ".css", (file, ctx) =>
       return new Promise((resolve, reject) =>
-        stylus(data["text"])
+        stylus(file["text"])
         .use(nib())
         .use((style) =>
-          style.define("getSiteConfig", (data) =>
-            keys = data["val"].toString().split(".")
+          style.define("getSiteConfig", (file) =>
+            keys = file["val"].toString().split(".")
             res = @site["siteConfig"]
             for k in keys
               if k not of res
@@ -248,8 +256,8 @@ class Hikaru
             return res
           )
         ).use((style) =>
-          style.define("getThemeConfig", (data) =>
-            keys = data["val"].toString().split(".")
+          style.define("getThemeConfig", (file) =>
+            keys = file["val"].toString().split(".")
             res = @site["themeConfig"]
             for k in keys
               if k not of res
@@ -257,25 +265,25 @@ class Hikaru
               res = res[k]
             return res
           )
-        ).set("filename", path.join(@site["themeSrcDir"], data["srcPath"]))
+        ).set("filename", path.join(@site["themeSrcDir"], file["srcPath"]))
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
         .render((err, res) ->
           if err
             return reject(err)
-          data["content"] = res
-          return resolve(data)
+          file["content"] = res
+          return resolve(file)
         )
       )
     )
 
     coffeeConfig = @site["siteConfig"]["coffeescript"] or {}
-    @renderer.register(".coffee", ".js", (data, ctx) ->
+    @renderer.register(".coffee", ".js", (file, ctx) ->
       return new Promise((resolve, reject) ->
         try
-          data["content"] = coffee.compile(data["text"], coffeeConfig)
-          return resolve(data)
+          file["content"] = coffee.compile(file["text"], coffeeConfig)
+          return resolve(file)
         catch err
           return reject(err)
       )
@@ -389,7 +397,7 @@ class Hikaru
             src = $(i).attr("src")
             if src.startsWith("https://") or src.startsWith("http://") or
             src.startsWith("//") or src.startsWith("/") or
-            src.startsWith("data:image")
+            src.startsWith("file:image")
               continue
             $(i).attr("src", getAbsPath(path.join(
               path.dirname(p["docPath"]), src
@@ -517,7 +525,7 @@ class Hikaru
               "url": getAbsPath(p["docPath"]),
               "content": p["text"]
             })
-          site["data"].push({
+          site["file"].push({
             "docPath": site["siteConfig"]["search"]["path"] or "search.json",
             "content": JSON.stringify(search)
           })
@@ -543,7 +551,7 @@ class Hikaru
             site["siteConfig"]["rootDir"]),
             "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
           })
-          site["data"].push({
+          site["file"].push({
             "docPath": site["siteConfig"]["sitemap"]["path"] or "sitemap.xml",
             "content": content
           })
@@ -572,7 +580,7 @@ class Hikaru
             site["siteConfig"]["rootDir"]),
             "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
           })
-          site["data"].push({
+          site["file"].push({
             "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
             "content": content
           })

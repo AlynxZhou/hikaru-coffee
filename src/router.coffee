@@ -36,7 +36,7 @@ class Router
       )
     )
 
-  readData: (srcDir, srcPath) =>
+  readFile: (srcDir, srcPath) =>
     @logger.debug("Hikaru is reading `#{colors.cyan(
       path.join(srcDir, srcPath)
     )}`...")
@@ -49,17 +49,17 @@ class Router
       }
     )
 
-  writeData: (srcDir, data) =>
+  writeFile: (srcDir, file) =>
     @logger.debug("Hikaru is writing `#{colors.cyan(
-      path.join(@site["docDir"], data["docPath"])
+      path.join(@site["docDir"], file["docPath"])
     )}`...")
-    if data["content"]?
+    if file["content"]?
       return fse.outputFile(
-        path.join(@site["docDir"], data["docPath"]), data["content"]
+        path.join(@site["docDir"], file["docPath"]), file["content"]
       )
     return fse.copy(
-      path.join(srcDir, data["srcPath"]),
-      path.join(@site["docDir"], data["docPath"])
+      path.join(srcDir, file["srcPath"]),
+      path.join(@site["docDir"], file["docPath"])
     )
 
   loadThemeAssets: () =>
@@ -72,8 +72,8 @@ class Router
         # Asset is in sub dir.
         return path.dirname(srcPath) isnt "."
       ).map((srcPath) =>
-        return @readData(@site["themeSrcDir"], srcPath).then((data) =>
-          @site["assets"].push(data)
+        return @readFile(@site["themeSrcDir"], srcPath).then((file) =>
+          @site["assets"].push(file)
         )
       ))
     )
@@ -85,11 +85,11 @@ class Router
       "cwd": @site["themeSrcDir"]
     }).then((templates) =>
       return Promise.all(templates.map((srcPath) =>
-        return @readData(@site["themeSrcDir"], srcPath).then((data) =>
-          data["key"] = path.basename(
+        return @readFile(@site["themeSrcDir"], srcPath).then((file) =>
+          file["key"] = path.basename(
             srcPath, path.extname(srcPath)
           )
-          @site["templates"][data["key"]] = data
+          @site["templates"][file["key"]] = file
         )
       ))
     )
@@ -101,32 +101,32 @@ class Router
       "cwd": @site["srcDir"]
     }).then((srcs) =>
       return Promise.all(srcs.map((srcPath) =>
-        @readData(@site["srcDir"], srcPath).then((data) =>
-          if typeof(data["raw"]) is "string"
-            parsed = fm(data["raw"])
-            data["text"] = parsed["body"]
-            data = Object.assign(data, parsed["attributes"])
-            if data["date"]?
+        @readFile(@site["srcDir"], srcPath).then((file) =>
+          if typeof(file["raw"]) is "string"
+            parsed = fm(file["raw"])
+            file["text"] = parsed["body"]
+            file = Object.assign(file, parsed["attributes"])
+            if file["date"]?
               # Fix js-yaml's bug that ignore timezone while parsing.
               # https://github.com/nodeca/js-yaml/issues/91
-              data["date"] = new Date(
-                data["date"].getTime() +
-                data["date"].getTimezoneOffset() * 60000
+              file["date"] = new Date(
+                file["date"].getTime() +
+                file["date"].getTimezoneOffset() * 60000
               )
             else
-              data["date"] = new Date()
-            if data["text"] isnt data["raw"]
-              if data["title"]?
-                data["title"] = data["title"].toString()
-              if data["layout"] is "post"
-                @site["posts"].push(data)
+              file["date"] = new Date()
+            if file["text"] isnt file["raw"]
+              if file["title"]?
+                file["title"] = file["title"].toString()
+              if file["layout"] is "post"
+                @site["posts"].push(file)
               else
                 # Need load templates first.
-                if data["layout"] not of @site["templates"]
-                  data["layout"] = "page"
-                @site["pages"].push(data)
+                if file["layout"] not of @site["templates"]
+                  file["layout"] = "page"
+                @site["pages"].push(file)
             else
-              @site["assets"].push(data)
+              @site["assets"].push(file)
         )
       ))
     )
@@ -206,26 +206,26 @@ class Router
 
   saveAssets: () =>
     return @site["assets"].map((asset) =>
-      @writeData(asset["srcDir"], asset)
+      @writeFile(asset["srcDir"], asset)
       return asset
     )
 
   savePosts: () =>
     return @site["posts"].map((post) =>
-      @writeData(post["srcDir"], post)
+      @writeFile(post["srcDir"], post)
       return post
     )
 
   savePages: () =>
     return @site["pages"].map((page) =>
-      @writeData(page["srcDir"], page)
+      @writeFile(page["srcDir"], page)
       return page
     )
 
-  saveData: () =>
-    return @site["data"].map((data) =>
-      @writeData(null, data)
-      return data
+  saveFile: () =>
+    return @site["file"].map((file) =>
+      @writeFile(null, file)
+      return file
     )
 
   route: () =>
@@ -265,7 +265,7 @@ class Router
       @site = await @generator.generate("afterProcessing", @site)
       @savePosts()
       @savePages()
-      @saveData()
+      @saveFile()
     ).catch((err) =>
       @logger.warn("Hikaru catched some error during generating!")
       @logger.error(err)
