@@ -45,6 +45,7 @@ class Renderer
         @logger.debug("Hikaru is rendering `#{colors.cyan(
           file["srcPath"]
         )}`...")
+        file["content"] = file["raw"]
         resolve(file)
       catch err
         reject(err)

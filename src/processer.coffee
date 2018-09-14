@@ -29,10 +29,6 @@ class Processer
     if p["layout"] of @_
       results = []
       for fn in @_[p["layout"]]
-        res = await fn(p, posts, ctx)
-        if res instanceof Array
-          results = results.concat(res)
-          continue
-        results.push(res)
-      return results
+        p = await fn(p, posts, ctx)
+      return p
     return Object.assign({}, p, ctx)

@@ -1,3 +1,4 @@
+fm = require("front-matter")
 path = require("path")
 {URL} = require("url")
 Promise = require("bluebird")
@@ -8,10 +9,47 @@ escapeHTML = (str) ->
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;")
   .replace(/"/g, "&quot;")
-  .replace(/'/g, "&#039;")
+  .replace(/"/g, "&#039;")
 
 removeControlChars = (str) ->
   return str.replace(/[\x00-\x1F\x7F]/g, "")
+
+parseFrontMatter = (file) ->
+  if typeof(file["raw"]) isnt "string"
+    return file
+  parsed = fm(file["raw"])
+  file["text"] = parsed["body"]
+  file["frontMatter"] = parsed["attributes"]
+  file = Object.assign(file, parsed["attributes"])
+  if file["date"]?
+    # Fix js-yaml"s bug that ignore timezone while parsing.
+    # https://github.com/nodeca/js-yaml/issues/91
+    file["date"] = new Date(
+      file["date"].getTime() +
+      file["date"].getTimezoneOffset() * 60000
+    )
+  else
+    file["date"] = new Date()
+  if file["title"]?
+    file["title"] = file["title"].toString()
+  return file
+
+getContentType = (docPath) ->
+  switch path.extname(docPath)
+    when ".html"
+      return "text/html; charset=UTF-8"
+    when ".html"
+      return "text/html; charset=UTF-8"
+    when ".js"
+      return "application/javascript; charset=UTF-8"
+    when ".css"
+      return "text/css; charset=UTF-8"
+    when ".txt"
+      return "text/plain; charset=UTF-8"
+    when ".manifest"
+      return "text/cache-manifest; charset=UTF-8"
+    else
+      return "application/octet-stream"
 
 paginate = (p, posts, perPage, ctx) ->
   if not perPage
@@ -106,6 +144,8 @@ isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
 module.exports = {
   "escapeHTML": escapeHTML,
   "removeControlChars": removeControlChars,
+  "parseFrontMatter": parseFrontMatter,
+  "getContentType": getContentType,
   "paginate": paginate,
   "sortCategories": sortCategories,
   "paginateCategories": paginateCategories,

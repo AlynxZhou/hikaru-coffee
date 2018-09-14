@@ -16,6 +16,7 @@ coffee = require("coffeescript")
 
 highlight = require("./highlight")
 Logger = require("./logger")
+Site = require("./site")
 Renderer = require("./renderer")
 Processer = require("./processer")
 Generator = require("./generator")
@@ -118,56 +119,45 @@ class Hikaru
     )
 
   generate: (workDir = ".", configPath) =>
-    @site = {
-      "workDir": workDir,
-      "siteConfig": {},
-      "themeConfig": {},
-      "templates": {},
-      "assets": [],
-      "pages": [],
-      "posts": [],
-      "file": [],
-      "categories": [],
-      # Flattend categories length.
-      "categoriesLength": 0,
-      "tags": [],
-      # Flattend tags length.
-      "tagsLength": 0
-    }
-    configPath = configPath or path.join(@site["workDir"], "config.yml")
+    @site = new Site(workDir)
+    configPath = configPath or path.join(@site.get("workDir"), "config.yml")
     try
-      @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+      @site.set(
+        "siteConfig", yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+      )
     catch err
       @logger.warn("Hikaru cannot find site config!")
       @logger.error(err)
       process.exit(-1)
-    @site["srcDir"] = path.join(
-      @site["workDir"], @site["siteConfig"]["srcDir"] or "srcs"
-    )
-    @site["docDir"] = path.join(
-      @site["workDir"], @site["siteConfig"]["docDir"] or "docs"
-    )
-    @site["themeDir"] = path.join(
-      @site["workDir"], "themes", @site["siteConfig"]["themeDir"]
-    )
-    @site["themeSrcDir"] = path.join(@site["themeDir"], "srcs")
+    @site.set("srcDir", path.join(
+      @site.get("workDir"), @site.get("siteConfig")["srcDir"] or "srcs"
+    ))
+    @site.set("docDir", path.join(
+      @site.get("workDir"), @site.get("siteConfig")["docDir"] or "docs"
+    ))
+    @site.set("themeDir", path.join(
+      @site.get("workDir"), "themes", @site.get("siteConfig")["themeDir"]
+    ))
+    @site.set("themeSrcDir", path.join(@site.get("themeDir"), "srcs"))
     try
-      @site["themeConfig"] = yaml.safeLoad(
-        fse.readFileSync(path.join(@site["themeDir"], "config.yml"))
-      )
+      @site.set("themeConfig", yaml.safeLoad(
+        fse.readFileSync(path.join(@site.get("themeDir"), "config.yml"))
+      ))
     catch err
       if err["code"] is "ENOENT"
         @logger.warn("Hikaru continues with a empty theme config...")
-    @site["categoryDir"] = @site["siteConfig"]["categoryDir"] or "categories"
-    @site["tagDir"] = @site["siteConfig"]["tagDir"] or "tags"
-    @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
+    @site.set(
+      "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
+    )
+    @site.set("tagDir", @site.get("siteConfig")["tagDir"] or "tags")
+    @renderer = new Renderer(@logger, @site.get("siteConfig")["skipRender"])
     @processer = new Processer(@logger)
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
     try
       defaultLanguage = yaml.safeLoad(
         fse.readFileSync(
-          path.join(@site["themeDir"], "languages", "default.yml")
+          path.join(@site.get("themeDir"), "languages", "default.yml")
         )
       )
       @translator.register("default", defaultLanguage)
@@ -185,13 +175,81 @@ class Hikaru
       @logger.warn("Hikaru cannot register internal functions!")
       @logger.error(err)
       process.exit(-2)
-    @router.route()
+    try
+      await @router.generate()
+    catch err
+      @logger.warn("Hikaru catched some error during generating!")
+      @logger.error(err)
+      @logger.warn("Hikaru advise you to check generated files!")
+
+  serve: (workDir = ".", configPath, ip, port) =>
+    @site = new Site(workDir)
+    configPath = configPath or path.join(@site.get("workDir"), "config.yml")
+    try
+      @site.set(
+        "siteConfig", yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+      )
+    catch err
+      @logger.warn("Hikaru cannot find site config!")
+      @logger.error(err)
+      process.exit(-1)
+    @site.set("srcDir", path.join(
+      @site.get("workDir"), @site.get("siteConfig")["srcDir"] or "srcs"
+    ))
+    @site.set("docDir", path.join(
+      @site.get("workDir"), @site.get("siteConfig")["docDir"] or "docs"
+    ))
+    @site.set("themeDir", path.join(
+      @site.get("workDir"), "themes", @site.get("siteConfig")["themeDir"]
+    ))
+    @site.set("themeSrcDir", path.join(@site.get("themeDir"), "srcs"))
+    try
+      @site.set("themeConfig", yaml.safeLoad(
+        fse.readFileSync(path.join(@site.get("themeDir"), "config.yml"))
+      ))
+    catch err
+      if err["code"] is "ENOENT"
+        @logger.warn("Hikaru continues with a empty theme config...")
+    @site.set(
+      "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
+    )
+    @site.set("tagDir", @site.get("siteConfig")["tagDir"] or "tags")
+    @renderer = new Renderer(@logger, @site.get("siteConfig")["skipRender"])
+    @processer = new Processer(@logger)
+    @generator = new Generator(@logger)
+    @translator = new Translator(@logger)
+    try
+      defaultLanguage = yaml.safeLoad(
+        fse.readFileSync(
+          path.join(@site.get("themeDir"), "languages", "default.yml")
+        )
+      )
+      @translator.register("default", defaultLanguage)
+    catch err
+      if err["code"] is "ENOENT"
+        @logger.warn("Hikaru cannot find default language file in your theme.")
+    @router = new Router(
+      @logger, @renderer, @processer, @generator, @translator, @site
+    )
+    try
+      @registerInternalRenderers()
+      @registerInternalProcessers()
+      @registerInternalGenerators()
+    catch err
+      @logger.warn("Hikaru cannot register internal functions!")
+      @logger.error(err)
+      process.exit(-2)
+    try
+      await @router.serve(ip or "localhost", Number.parseInt(port) or 2333)
+    catch err
+      @logger.warn("Hikaru catched some error during serving!")
+      @logger.error(err)
 
   registerInternalRenderers: () =>
     njkConfig = Object.assign(
-      {"autoescape": false}, @site["siteConfig"]["nunjucks"]
+      {"autoescape": false}, @site.get("siteConfig")["nunjucks"]
     )
-    njkEnv = nunjucks.configure(@site["themeSrcDir"], njkConfig)
+    njkEnv = nunjucks.configure(@site.get("themeSrcDir"), njkConfig)
     @renderer.register([".njk", ".j2"], null, (file, ctx) ->
       return new Promise((resolve, reject) ->
         try
@@ -219,8 +277,8 @@ class Hikaru
           "lang": lang?.toLowerCase(),
           "hljs": true,
           "gutter": true
-        }, @site["siteConfig"]["highlight"]))
-    }, @site["siteConfig"]["marked"])
+        }, @site.get("siteConfig")["highlight"]))
+    }, @site.get("siteConfig")["marked"])
     marked.setOptions(markedConfig)
     @renderer.register(".md", ".html", (file, ctx) ->
       return new Promise((resolve, reject) ->
@@ -232,7 +290,7 @@ class Hikaru
       )
     )
 
-    stylConfig = @site["siteConfig"]["stylus"] or {}
+    stylConfig = @site.get("siteConfig")["stylus"] or {}
     @renderer.register(".styl", ".css", (file, ctx) =>
       return new Promise((resolve, reject) =>
         stylus(file["text"])
@@ -240,7 +298,7 @@ class Hikaru
         .use((style) =>
           style.define("getSiteConfig", (file) =>
             keys = file["val"].toString().split(".")
-            res = @site["siteConfig"]
+            res = @site.get("siteConfig")
             for k in keys
               if k not of res
                 return null
@@ -250,14 +308,14 @@ class Hikaru
         ).use((style) =>
           style.define("getThemeConfig", (file) =>
             keys = file["val"].toString().split(".")
-            res = @site["themeConfig"]
+            res = @site.get("themeConfig")
             for k in keys
               if k not of res
                 return null
               res = res[k]
             return res
           )
-        ).set("filename", path.join(@site["themeSrcDir"], file["srcPath"]))
+        ).set("filename", path.join(@site.get("themeSrcDir"), file["srcPath"]))
         .set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
@@ -270,7 +328,7 @@ class Hikaru
       )
     )
 
-    coffeeConfig = @site["siteConfig"]["coffeescript"] or {}
+    coffeeConfig = @site.get("siteConfig")["coffeescript"] or {}
     @renderer.register(".coffee", ".js", (file, ctx) ->
       return new Promise((resolve, reject) ->
         try
@@ -289,7 +347,7 @@ class Hikaru
             return -(a["date"] - b["date"])
           )
           return resolve(paginate(
-            p, posts, @site["siteConfig"]["perPage"], ctx
+            p, posts, @site.get("siteConfig")["perPage"], ctx
           ))
         catch err
           return reject(err)
@@ -303,29 +361,29 @@ class Hikaru
             return -(a["date"] - b["date"])
           )
           return resolve(paginate(
-            p, posts, @site["siteConfig"]["perPage"], ctx
+            p, posts, @site.get("siteConfig")["perPage"], ctx
           ))
         catch err
           return reject(err)
       )
     )
 
-    @processer.register("categories", (p, posts, ctx) ->
-      return new Promise((resolve, reject) ->
+    @processer.register("categories", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
         try
           return resolve(Object.assign({}, p, ctx, {
-            "categories": ctx["site"]["categories"]
+            "categories": @site.get("categories")
           }))
         catch err
           return reject(err)
       )
     )
 
-    @processer.register("tags", (p, posts, ctx) ->
-      return new Promise((resolve, reject) ->
+    @processer.register("tags", (p, posts, ctx) =>
+      return new Promise((resolve, reject) =>
         try
           return resolve(Object.assign({}, p, ctx, {
-            "tags": ctx["site"]["tags"]
+            "tags": @site.get("tags")
           }))
         catch err
           return reject(err)
@@ -336,9 +394,10 @@ class Hikaru
       return new Promise((resolve, reject) =>
         try
           getUrl = getUrlFn(
-            @site["siteConfig"]["baseUrl"], @site["siteConfig"]["rootDir"]
+            @site.get("siteConfig")["baseUrl"],
+            @site.get("siteConfig")["rootDir"]
           )
-          getAbsPath = getAbsPathFn(@site["siteConfig"]["rootDir"])
+          getAbsPath = getAbsPathFn(@site.get("siteConfig")["rootDir"])
           $ = cheerio.load(p["content"])
           # TOC generate.
           hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
@@ -358,10 +417,10 @@ class Hikaru
             else
               id = escaped
               headerIds[escaped] = 1
+            $(h).attr("id", "#{id}")
             $(h).html(
-              "<#{h["name"]} id=\"#{id}\">" +
               "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
-              "</a>" + "#{text}" + "</#{h["name"]}>"
+              "</a>" + "#{text}"
             )
             level.push({
               "docPath": path.join(path.dirname(p["docPath"]), "##{id}"),
@@ -374,7 +433,7 @@ class Hikaru
           for a in links
             href = $(a).attr("href")
             if new URL(
-              href, @site["siteConfig"]["baseUrl"]
+              href, @site.get("siteConfig")["baseUrl"]
             ).host isnt getUrl(p["docPath"]).host
               $(a).attr("target", "_blank")
             if href.startsWith("https://") or href.startsWith("http://") or
@@ -412,12 +471,12 @@ class Hikaru
         try
           categories = []
           categoriesLength = 0
-          for post in site["posts"]
-            if not post["categories"]?
+          for post in site.get("posts")
+            if not post["frontMatter"]["categories"]?
               continue
             postCategories = []
             subCategories = categories
-            for cateName in post["categories"]
+            for cateName in post["frontMatter"]["categories"]
               found = false
               for category in subCategories
                 if category["name"] is cateName
@@ -438,13 +497,14 @@ class Hikaru
           )
           for sub in categories
             sortCategories(sub)
-            site["pages"] = site["pages"].concat(paginateCategories(
+            for p in paginateCategories(
               sub,
-              site["categoryDir"],
-              site["siteConfig"]["perPage"]
-            ))
-          site["categories"] = categories
-          site["categoriesLength"] = categoriesLength
+              site.get("categoryDir"),
+              site.get("siteConfig")["perPage"]
+            )
+              site.put("pages", p)
+          site.set("categories", categories)
+          site.set("categoriesLength", categoriesLength)
           return resolve(site)
         catch err
           return reject(err)
@@ -457,11 +517,11 @@ class Hikaru
         try
           tags = []
           tagsLength = 0
-          for post in site["posts"]
-            if not post["tags"]?
+          for post in site.get("posts")
+            if not post["frontMatter"]["tags"]?
               continue
             postTags = []
-            for tagName in post["tags"]
+            for tagName in post["frontMatter"]["tags"]
               found = false
               for tag in tags
                 if tag["name"] is tagName
@@ -485,17 +545,18 @@ class Hikaru
             sp = {
               "layout": "tag",
               "docPath": path.join(
-                site["tagDir"], "#{tag["name"]}", "index.html"
+                site.get("tagDir"), "#{tag["name"]}", "index.html"
               ),
               "title": "tag",
               "name": tag["name"].toString()
             }
             tag["docPath"] = sp["docPath"]
-            site["pages"] = site["pages"].concat(paginate(
-              sp, tag["posts"], site["siteConfig"]["perPage"]
-            ))
-          site["tags"] = tags
-          site["tagsLength"] = tagsLength
+            for p in paginate(
+              sp, tag["posts"], site.get("siteConfig")["perPage"]
+            )
+              site.put("pages", p)
+          site.set("tags", tags)
+          site.set("tagsLength", tagsLength)
           return resolve(site)
         catch err
           return reject(err)
@@ -505,20 +566,22 @@ class Hikaru
     @generator.register("afterProcessing", (site) ->
       return new Promise((resolve, reject) ->
         try
-          if not site["siteConfig"]["search"]["enable"]
+          if not site.get("siteConfig")["search"]["enable"]
             return resolve(site)
           # Generate search index.
           search = []
-          all = site["pages"].concat(site["posts"])
-          getAbsPath = getAbsPathFn(site["siteConfig"]["rootDir"])
+          all = site.get("pages").concat(site.get("posts"))
+          getAbsPath = getAbsPathFn(site.get("siteConfig")["rootDir"])
           for p in all
             search.push({
               "title": "#{p["title"]}",
               "url": getAbsPath(p["docPath"]),
               "content": p["text"]
             })
-          site["file"].push({
-            "docPath": site["siteConfig"]["search"]["path"] or "search.json",
+          site.put("files", {
+            "docPath": site.get(
+              "siteConfig"
+            )["search"]["path"] or "search.json",
             "content": JSON.stringify(search)
           })
           return resolve(site)
@@ -530,21 +593,23 @@ class Hikaru
     @generator.register("afterProcessing", (site) ->
       return new Promise((resolve, reject) ->
         try
-          if not site["siteConfig"]["sitemap"]["enable"]
+          if not site.get("siteConfig")["sitemap"]["enable"]
             return resolve(site)
           # Generate sitemap.
           tmpContent = fse.readFileSync(path.join(
             __dirname, "..", "dist", "sitemap.njk"
           ), "utf8")
           content = nunjucks.renderString(tmpContent, {
-            "posts": site["posts"],
+            "posts": site.get("posts"),
             "moment": moment,
-            "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
-            site["siteConfig"]["rootDir"]),
-            "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
+            "getUrl": getUrlFn(site.get("siteConfig")["baseUrl"],
+            site.get("siteConfig")["rootDir"]),
+            "getAbsPath": getAbsPathFn(site.get("siteConfig")["rootDir"])
           })
-          site["file"].push({
-            "docPath": site["siteConfig"]["sitemap"]["path"] or "sitemap.xml",
+          site.put("files", {
+            "docPath": site.get(
+              "siteConfig"
+            )["sitemap"]["path"] or "sitemap.xml",
             "content": content
           })
           return resolve(site)
@@ -556,24 +621,24 @@ class Hikaru
     @generator.register("afterProcessing", (site) ->
       return new Promise((resolve, reject) ->
         try
-          if not site["siteConfig"]["feed"]["enable"]
+          if not site.get("siteConfig")["feed"]["enable"]
             return resolve(site)
           # Generate RSS feed.
           tmpContent = fse.readFileSync(path.join(
             __dirname, "..", "dist", "atom.njk"
           ), "utf8")
           content = nunjucks.renderString(tmpContent, {
-            "siteConfig": site["siteConfig"],
-            "themeConfig": site["themeConfig"],
-            "posts": site["posts"],
+            "siteConfig": site.get("siteConfig"),
+            "themeConfig": site.get("themeConfig"),
+            "posts": site.get("posts"),
             "moment": moment,
             "removeControlChars": removeControlChars,
-            "getUrl": getUrlFn(site["siteConfig"]["baseUrl"],
-            site["siteConfig"]["rootDir"]),
-            "getAbsPath": getAbsPathFn(site["siteConfig"]["rootDir"])
+            "getUrl": getUrlFn(site.get("siteConfig")["baseUrl"],
+            site.get("siteConfig")["rootDir"]),
+            "getAbsPath": getAbsPathFn(site.get("siteConfig")["rootDir"])
           })
-          site["file"].push({
-            "docPath": site["siteConfig"]["feed"]["path"] or "atom.xml",
+          site.put("files", {
+            "docPath": site.get("siteConfig")["feed"]["path"] or "atom.xml",
             "content": content
           })
           return resolve(site)

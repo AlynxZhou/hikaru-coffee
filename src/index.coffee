@@ -28,4 +28,15 @@ commander.command("generate [dir]").alias("g")
   new Hikaru(cmd["debug"]).generate(dir || ".", cmd["config"])
 )
 
+commander.command("serve [dir]").alias("s")
+.option("-g, --debug", "Print debug messages.")
+.option("-c, --config <yml>", "Alternative config path.")
+.option("-i, --ip <ip>", "Alternative listening IP address.")
+.option("-p, --port <port>", "Alternative listening port.")
+.action((dir, cmd) ->
+  new Hikaru(cmd["debug"]).serve(
+    dir || ".", cmd["config"], cmd["ip"], cmd["port"]
+  )
+)
+
 commander.parse(process.argv)
