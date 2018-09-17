@@ -4,6 +4,7 @@ yaml = require("js-yaml")
 glob = require("glob")
 http = require("http")
 {URL} = require("url")
+Site = require("./site")
 colors = require("colors/safe")
 moment = require("moment")
 chokidar = require("chokidar")
@@ -28,8 +29,7 @@ class Router
     @_ = {}
     @srcWatcher = null
     @themeWatcher = null
-    @unProcessedPages = []
-    @unProcessedPosts = []
+    @unprocessedSite = new Site(@site["workDir"])
     @getUrl = getUrlFn(
       @site.get("siteConfig")["baseUrl"], @site.get("siteConfig")["rootDir"]
     )
@@ -81,8 +81,10 @@ class Router
     if file["srcDir"] is @site.get("themeSrcDir")
       file = await @renderer.render(file)
       if path.dirname(file["srcPath"]) isnt "."
+        file["type"] = "asset"
         @site.put("assets", file)
       else
+        file["type"] = "template"
         @site.get("templates")[path.basename(
           file["srcPath"], path.extname(file["srcPath"])
         )] = file
@@ -91,12 +93,16 @@ class Router
       file = await @renderer.render(file)
       if file["text"] isnt file["raw"]
         if file["layout"] is "post"
+          file["type"] = "post"
           @site.put("posts", file)
         else
           file["layout"] = file["layout"] or "page"
+          file["type"] = "page"
           @site.put("pages", file)
       else
+        file["type"] = "asset"
         @site.put("assets", file)
+    return file
 
   processP: (p) =>
     lang = p["language"] or @site.get("siteConfig")["language"]
@@ -198,13 +204,23 @@ class Router
             colors.cyan(path.join(@site.get("themeSrcDir"), srcPath))
           }`"
         )
-        @site.set("pages", @unProcessedPages)
-        @site.set("posts", @unProcessedPosts)
-        @unProcessedPages = @site.get("pages")[0...]
-        @unProcessedPosts = @site.get("posts")[0...]
+        @site.set("pages", @unprocessedSite.get("pages"))
+        @unprocessedSite.set("pages", @site.get("pages")[0...])
         file = {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
         if event isnt "unlink"
-          @loadFile(file)
+          file = await @loadFile(file)
+          if file["type"] is "template"
+            @site.set("templates", await Promise.all(
+              @site.get("templates").map((file) =>
+                return @renderer.render(file)
+              )
+            ))
+          else if file["type"] is "asset"
+            @site.set("assets", await Promise.all(
+              @site.get("assets").map((file) =>
+                return @renderer.render(file)
+              )
+            ))
         else
           for key in ["assets", "templates"]
             if @site.splice(key, file)?
@@ -228,13 +244,17 @@ class Router
             colors.cyan(path.join(@site.get("srcDir"), srcPath))
           }`"
         )
-        @site.set("pages", @unProcessedPages)
-        @site.set("posts", @unProcessedPosts)
-        @unProcessedPages = @site.get("pages")[0...]
-        @unProcessedPosts = @site.get("posts")[0...]
+        @site.set("pages", @unprocessedSite.get("pages"))
+        @unprocessedSite.set("pages", @site.get("pages")[0...])
         file = {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
         if event isnt "unlink"
-          @loadFile(file)
+          file = await @loadFile(file)
+          if file["type"] is "asset"
+            @site.set("assets", await Promise.all(
+              @site.get("assets").map((file) =>
+                return @renderer.render(file)
+              )
+            ))
         else
           for key in ["assets", "pages", "posts"]
             if @site.splice(key, file)?
@@ -332,8 +352,7 @@ class Router
       return {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @unProcessedPages = @site.get("pages")[0...]
-    @unProcessedPosts = @site.get("posts")[0...]
+    @unprocessedSite.set("pages", @site.get("pages")[0...])
     @site = await @generator.generate("beforeProcessing", @site)
     await @processPosts()
     await @processPages()
