@@ -246,6 +246,53 @@ class Router
         @buildServerRoutes()
       )
 
+  unwatchAll: () =>
+    @themeWatcher.close()
+    @themeWatcher = null
+    @srcWatcher.close()
+    @srcWatcher = null
+
+  listen: (ip, port) =>
+    server = http.createServer((request, response) =>
+      if request["url"] not of @_
+        @logger.log("404: #{request["url"]}")
+        res = @_[@getAbsPath("404.html")]
+        response.writeHead(404, {
+          "Content-Type": getContentType(res["docPath"])
+        })
+      else
+        @logger.log("200: #{request["url"]}")
+        res = @_[request["url"]]
+        response.writeHead(200, {
+          "Content-Type": getContentType(res["docPath"])
+        })
+      if res["layout"]?
+        if res["layout"] not of @site.get("templates")
+          res["layout"] = "page"
+        response.write(
+          await @site.get("templates")[res["layout"]]["content"](res)
+        )
+      else
+        response.write(res["content"])
+      response.end()
+    )
+    process.prependListener("exit", () =>
+      server.close()
+      @logger.log(
+        "Hikaru stopped listening on http://#{ip}:#{port}#{@getAbsPath()}..."
+      )
+      @unwatchAll()
+    )
+    @logger.log(
+      "Hikaru is listening on http://#{ip}:#{port}#{@getAbsPath()}..."
+    )
+    if ip isnt "localhost"
+      server.listen(port, ip)
+    else
+      server.listen(port)
+    @watchTheme()
+    @watchSrc()
+
   generate: () =>
     allFiles = (await @matchFiles(path.join("**", "*"), {
       "nodir": true,
@@ -292,45 +339,6 @@ class Router
     await @processPages()
     @site = await @generator.generate("afterProcessing", @site)
     @buildServerRoutes()
-    server = new http.Server()
-    server.on("request", (request, response) =>
-      if request["url"] not of @_
-        @logger.log("404: #{request["url"]}")
-        res = @_[@getAbsPath("404.html")]
-        response.writeHead(404, {
-          "Content-Type": getContentType(res["docPath"])
-        })
-      else
-        @logger.log("200: #{request["url"]}")
-        res = @_[request["url"]]
-        response.writeHead(200, {
-          "Content-Type": getContentType(res["docPath"])
-        })
-      if res["layout"]?
-        if res["layout"] not of @site.get("templates")
-          res["layout"] = "page"
-        response.write(
-          await @site.get("templates")[res["layout"]]["content"](res)
-        )
-      else
-        response.write(res["content"])
-      response.end()
-      return
-    )
-    server.on("close", () =>
-      @themeWatcher.close()
-      @themeWatcher = null
-      @srcWatcher.close()
-      @srcWatcher = null
-    )
-    @logger.log(
-      "Hikaru is listening on http://#{ip}:#{port}#{@getAbsPath()}..."
-    )
-    if ip isnt "localhost"
-      server.listen(port, ip)
-    else
-      server.listen(port)
-    @watchTheme()
-    @watchSrc()
+    @listen(ip, port)
 
 module.exports = Router

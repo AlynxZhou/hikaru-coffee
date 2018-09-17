@@ -40,6 +40,16 @@ class Hikaru
     process.on("exit", () =>
       @logger.debug("Hikaru is stopping...")
     )
+    if process.platform is "win32"
+      require("readline").createInterface({
+        "input": process.stdin,
+        "output": process.stdout
+      }).on("SIGINT", () ->
+        process.emit("SIGINT")
+      )
+    process.on("SIGINT", () ->
+      process.exit(0)
+    )
 
   init: (workDir = ".", configPath) =>
     return fse.mkdirp(workDir).then(() =>
