@@ -1,7 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
 
-module.exports =
 class Processer
   constructor: (logger) ->
     @logger = logger
@@ -32,3 +31,5 @@ class Processer
         p = await fn(p, posts, ctx)
       return p
     return Object.assign({}, p, ctx)
+
+module.exports = Processer

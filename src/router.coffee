@@ -17,7 +17,6 @@ Promise = require("bluebird")
   parseFrontMatter
 } = require("./utils")
 
-module.exports =
 class Router
   constructor: (logger, renderer, processer, generator, translator, site) ->
     @logger = logger
@@ -27,12 +26,14 @@ class Router
     @translator = translator
     @site = site
     @_ = {}
+    @srcWatcher = null
+    @themeWatcher = null
+    @unProcessedPages = []
+    @unProcessedPosts = []
     @getUrl = getUrlFn(
       @site.get("siteConfig")["baseUrl"], @site.get("siteConfig")["rootDir"]
     )
     @getAbsPath = getAbsPathFn(@site.get("siteConfig")["rootDir"])
-    @srcWatcher = null
-    @themeWatcher = null
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -185,6 +186,66 @@ class Router
       @logger.debug("Hikaru is building route `#{colors.cyan(key)}`...")
       @_[key] = f
 
+  watchTheme: () =>
+    @themeWatcher = chokidar.watch(path.join("**", "*"), {
+      "cwd": @site.get("themeSrcDir"),
+      "ignoreInitial": true
+    })
+    for event in ["add", "change", "unlink"] then do (event) =>
+      @themeWatcher.on(event, (srcPath) =>
+        @logger.debug(
+          "Hikaru watched event `#{colors.blue(event)}` from `#{
+            colors.cyan(path.join(@site.get("themeSrcDir"), srcPath))
+          }`"
+        )
+        @site.set("pages", @unProcessedPages)
+        @site.set("posts", @unProcessedPosts)
+        @unProcessedPages = @site.get("pages")[0...]
+        @unProcessedPosts = @site.get("posts")[0...]
+        file = {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
+        if event isnt "unlink"
+          @loadFile(file)
+        else
+          for key in ["assets", "templates"]
+            if @site.splice(key, file)?
+              break
+        @site = await @generator.generate("beforeProcessing", @site)
+        await @processPosts()
+        await @processPages()
+        @site = await @generator.generate("afterProcessing", @site)
+        @buildServerRoutes()
+      )
+
+  watchSrc: () =>
+    @srcWatcher = chokidar.watch(path.join("**", "*"), {
+      "cwd": @site.get("srcDir"),
+      "ignoreInitial": true
+    })
+    for event in ["add", "change", "unlink"] then do (event) =>
+      @srcWatcher.on(event, (srcPath) =>
+        @logger.debug(
+          "Hikaru watched event `#{colors.blue(event)}` from `#{
+            colors.cyan(path.join(@site.get("srcDir"), srcPath))
+          }`"
+        )
+        @site.set("pages", @unProcessedPages)
+        @site.set("posts", @unProcessedPosts)
+        @unProcessedPages = @site.get("pages")[0...]
+        @unProcessedPosts = @site.get("posts")[0...]
+        file = {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
+        if event isnt "unlink"
+          @loadFile(file)
+        else
+          for key in ["assets", "pages", "posts"]
+            if @site.splice(key, file)?
+              break
+        @site = await @generator.generate("beforeProcessing", @site)
+        await @processPosts()
+        await @processPages()
+        @site = await @generator.generate("afterProcessing", @site)
+        @buildServerRoutes()
+      )
+
   generate: () =>
     allFiles = (await @matchFiles(path.join("**", "*"), {
       "nodir": true,
@@ -224,8 +285,8 @@ class Router
       return {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
     ))
     await Promise.all(allFiles.map(@loadFile))
-    unProcessedPages = @site.get("pages")[0...]
-    unProcessedPosts = @site.get("posts")[0...]
+    @unProcessedPages = @site.get("pages")[0...]
+    @unProcessedPosts = @site.get("posts")[0...]
     @site = await @generator.generate("beforeProcessing", @site)
     await @processPosts()
     await @processPages()
@@ -269,59 +330,7 @@ class Router
       server.listen(port, ip)
     else
       server.listen(port)
-    @themeWatcher = chokidar.watch(path.join("**", "*"), {
-      "cwd": @site.get("themeSrcDir"),
-      "ignoreInitial": true
-    })
-    for event in ["add", "change", "unlink"] then do (event) =>
-      @themeWatcher.on(event, (srcPath) =>
-        @logger.debug(
-          "Hikaru watched event `#{colors.blue(event)}` from `#{
-            colors.cyan(path.join(@site.get("themeSrcDir"), srcPath))
-          }`"
-        )
-        @site.set("pages", unProcessedPages)
-        @site.set("posts", unProcessedPosts)
-        unProcessedPages = @site.get("pages")[0...]
-        unProcessedPosts = @site.get("posts")[0...]
-        file = {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
-        if event isnt "unlink"
-          @loadFile(file)
-        else
-          for key in ["assets", "templates"]
-            if @site.splice(key, file)?
-              break
-        @site = await @generator.generate("beforeProcessing", @site)
-        await @processPosts()
-        await @processPages()
-        @site = await @generator.generate("afterProcessing", @site)
-        @buildServerRoutes()
-      )
-    @srcWatcher = chokidar.watch(path.join("**", "*"), {
-      "cwd": @site.get("srcDir"),
-      "ignoreInitial": true
-    })
-    for event in ["add", "change", "unlink"] then do (event) =>
-      @srcWatcher.on(event, (srcPath) =>
-        @logger.debug(
-          "Hikaru watched event `#{colors.blue(event)}` from `#{
-            colors.cyan(path.join(@site.get("srcDir"), srcPath))
-          }`"
-        )
-        @site.set("pages", unProcessedPages)
-        @site.set("posts", unProcessedPosts)
-        unProcessedPages = @site.get("pages")[0...]
-        unProcessedPosts = @site.get("posts")[0...]
-        file = {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
-        if event isnt "unlink"
-          @loadFile(file)
-        else
-          for key in ["assets", "pages", "posts"]
-            if @site.splice(key, file)?
-              break
-        @site = await @generator.generate("beforeProcessing", @site)
-        await @processPosts()
-        await @processPages()
-        @site = await @generator.generate("afterProcessing", @site)
-        @buildServerRoutes()
-      )
+    @watchTheme()
+    @watchSrc()
+
+module.exports = Router

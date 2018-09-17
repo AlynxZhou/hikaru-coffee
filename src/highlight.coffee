@@ -25,7 +25,6 @@ highlightAuto = (str) ->
     return data
   return {"value": escapeHTML(str), "language": "plain"}
 
-module.exports =
 highlight = (str, options = {}) ->
   if not aliases?
     aliases = loadLangAliases()
@@ -54,3 +53,5 @@ highlight = (str, options = {}) ->
   results.push(data["value"])
   results.push("</code></pre></figure>")
   return results.join("")
+
+module.exports = highlight

@@ -1,7 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
 
-module.exports =
 class Generator
   constructor: (logger) ->
     @logger = logger
@@ -37,3 +36,5 @@ class Generator
     for fn in @_[type]
       site = await fn(site)
     return site
+
+module.exports = Generator

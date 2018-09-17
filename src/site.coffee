@@ -1,4 +1,3 @@
-module.exports =
 class Site
   constructor: (workDir) ->
     @_ = {
@@ -52,3 +51,5 @@ class Site
 
   raw: () =>
     return @_
+
+module.exports = Site

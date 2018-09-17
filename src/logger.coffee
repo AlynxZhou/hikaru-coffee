@@ -1,7 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
 
-module.exports =
 class Logger extends console.Console
   constructor: (debug, options = {
     "stdout": process.stdout,
@@ -25,3 +24,5 @@ class Logger extends console.Console
 
   error: (strs...) ->
     super.error(colors.red("ERROR:"), strs...)
+
+module.exports = Logger

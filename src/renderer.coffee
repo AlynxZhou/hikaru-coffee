@@ -2,7 +2,6 @@ path = require("path")
 colors = require("colors/safe")
 Promise = require("bluebird")
 
-module.exports =
 class Renderer
   constructor: (logger, skipRenderList) ->
     @logger = logger
@@ -50,3 +49,5 @@ class Renderer
       catch err
         reject(err)
     )
+
+module.exports = Renderer

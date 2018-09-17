@@ -1,7 +1,6 @@
 {format} = require("util")
 Promise = require("bluebird")
 
-module.exports =
 class Translator
   constructor: (logger) ->
     @logger = logger
@@ -42,3 +41,5 @@ class Translator
         return format(key, args)
       else
         return key
+
+module.exports = Translator

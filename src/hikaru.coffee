@@ -32,7 +32,6 @@ Router = require("./router")
   getUrlFn
 } = require("./utils")
 
-module.exports =
 class Hikaru
   constructor: (debug = false) ->
     @debug = debug
@@ -119,62 +118,8 @@ class Hikaru
     )
 
   generate: (workDir = ".", configPath) =>
-    @site = new Site(workDir)
-    configPath = configPath or path.join(@site.get("workDir"), "config.yml")
-    try
-      @site.set(
-        "siteConfig", yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-      )
-    catch err
-      @logger.warn("Hikaru cannot find site config!")
-      @logger.error(err)
-      process.exit(-1)
-    @site.set("srcDir", path.join(
-      @site.get("workDir"), @site.get("siteConfig")["srcDir"] or "srcs"
-    ))
-    @site.set("docDir", path.join(
-      @site.get("workDir"), @site.get("siteConfig")["docDir"] or "docs"
-    ))
-    @site.set("themeDir", path.join(
-      @site.get("workDir"), "themes", @site.get("siteConfig")["themeDir"]
-    ))
-    @site.set("themeSrcDir", path.join(@site.get("themeDir"), "srcs"))
-    try
-      @site.set("themeConfig", yaml.safeLoad(
-        fse.readFileSync(path.join(@site.get("themeDir"), "config.yml"))
-      ))
-    catch err
-      if err["code"] is "ENOENT"
-        @logger.warn("Hikaru continues with a empty theme config...")
-    @site.set(
-      "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
-    )
-    @site.set("tagDir", @site.get("siteConfig")["tagDir"] or "tags")
-    @renderer = new Renderer(@logger, @site.get("siteConfig")["skipRender"])
-    @processer = new Processer(@logger)
-    @generator = new Generator(@logger)
-    @translator = new Translator(@logger)
-    try
-      defaultLanguage = yaml.safeLoad(
-        fse.readFileSync(
-          path.join(@site.get("themeDir"), "languages", "default.yml")
-        )
-      )
-      @translator.register("default", defaultLanguage)
-    catch err
-      if err["code"] is "ENOENT"
-        @logger.warn("Hikaru cannot find default language file in your theme.")
-    @router = new Router(
-      @logger, @renderer, @processer, @generator, @translator, @site
-    )
-    try
-      @registerInternalRenderers()
-      @registerInternalProcessers()
-      @registerInternalGenerators()
-    catch err
-      @logger.warn("Hikaru cannot register internal functions!")
-      @logger.error(err)
-      process.exit(-2)
+    @loadSite(workDir, configPath)
+    @loadModules()
     try
       await @router.generate()
     catch err
@@ -183,6 +128,15 @@ class Hikaru
       @logger.warn("Hikaru advise you to check generated files!")
 
   serve: (workDir = ".", configPath, ip, port) =>
+    @loadSite(workDir, configPath)
+    @loadModules()
+    try
+      await @router.serve(ip or "localhost", Number.parseInt(port) or 2333)
+    catch err
+      @logger.warn("Hikaru catched some error during serving!")
+      @logger.error(err)
+
+  loadSite: (workDir, configPath) =>
     @site = new Site(workDir)
     configPath = configPath or path.join(@site.get("workDir"), "config.yml")
     try
@@ -214,6 +168,8 @@ class Hikaru
       "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
     )
     @site.set("tagDir", @site.get("siteConfig")["tagDir"] or "tags")
+
+  loadModules: () =>
     @renderer = new Renderer(@logger, @site.get("siteConfig")["skipRender"])
     @processer = new Processer(@logger)
     @generator = new Generator(@logger)
@@ -239,11 +195,6 @@ class Hikaru
       @logger.warn("Hikaru cannot register internal functions!")
       @logger.error(err)
       process.exit(-2)
-    try
-      await @router.serve(ip or "localhost", Number.parseInt(port) or 2333)
-    catch err
-      @logger.warn("Hikaru catched some error during serving!")
-      @logger.error(err)
 
   registerInternalRenderers: () =>
     njkConfig = Object.assign(
@@ -646,3 +597,5 @@ class Hikaru
           return reject(err)
       )
     )
+
+module.exports = Hikaru
