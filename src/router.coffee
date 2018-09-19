@@ -210,11 +210,8 @@ class Router
         if event isnt "unlink"
           file = await @loadFile(file)
           if file["type"] is "template"
-            @site.set("templates", await Promise.all(
-              @site.get("templates").map((file) =>
-                return @renderer.render(file)
-              )
-            ))
+            for k, v of @site.get("templates")
+              @site.get("templates")[k] = await @renderer.render(v)
           else if file["type"] is "asset"
             @site.set("assets", await Promise.all(
               @site.get("assets").map((file) =>
