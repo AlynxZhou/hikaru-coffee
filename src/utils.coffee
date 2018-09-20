@@ -136,7 +136,8 @@ isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
     )).split(path.posix.sep)
     if strict and testToken.length isnt currentToken.length
       return false
-    for i in [0...currentToken.length]
+    # testPath is shorter and usually be a menu link.
+    for i in [0...testToken.length]
       if testToken[i] isnt currentToken[i]
         return false
     return true
