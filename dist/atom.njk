@@ -6,7 +6,7 @@
   <link href="{{ getUrl(siteConfig.feed.path or "atom.xml") }}" rel="self" />
   {% if siteConfig.feed.hub %}<link href="{{ siteConfig.feed.hub }}" rel="hub"/>{% endif %}
   <link href="{{ getUrl() }}" />
-  <updated>{{ moment(posts[0].date).format() }}</updated>
+  <updated>{{ moment(posts[0].date).format("YYYY-MM-DD HH:mm:ss") }}</updated>
   <id>{{ getUrl() }}</id>
   {% if siteConfig.author %}
   <author>
@@ -20,8 +20,8 @@
     <title>{{ post.title }}</title>
     <link href="{{ getUrl(post.docPath) }}" />
     <id>{{ getUrl(post.docPath) }}</id>
-    <published>{{ moment(post.date).format() }}</published>
-    <updated>{{ moment(post.date).format() }}</updated>
+    <published>{{ moment(post.date).format("YYYY-MM-DD HH:mm:ss") }}</published>
+    <updated>{{ moment(post.date).format("YYYY-MM-DD HH:mm:ss") }}</updated>
     {% if siteConfig.feed.content and post.content %}
     <content type="html"><![CDATA[{{ removeControlChars(post.content) | safe }}]]></content>
     {% endif %}
