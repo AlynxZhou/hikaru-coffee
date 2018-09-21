@@ -5,7 +5,7 @@ author: Hikaru
 email:
 language: default
 
-baseUrl: https://yourdomain.com
+baseURL: https://yourdomain.com
 rootDir: /
 srcDir: srcs
 docDir: docs

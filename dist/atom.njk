@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{{ siteConfig.title }}</title>
-  {% if themeConfig.avatar %}<icon>{{ getUrl(themeConfig.avatar) }}</icon>{% endif %}
+  {% if themeConfig.avatar %}<icon>{{ getURL(themeConfig.avatar) }}</icon>{% endif %}
   {% if siteConfig.subtitle %}<subtitle>{{ siteConfig.subtitle }}</subtitle>{% endif %}
-  <link href="{{ getUrl(siteConfig.feed.path or "atom.xml") }}" rel="self" />
+  <link href="{{ getURL(siteConfig.feed.path or "atom.xml") }}" rel="self" />
   {% if siteConfig.feed.hub %}<link href="{{ siteConfig.feed.hub }}" rel="hub"/>{% endif %}
-  <link href="{{ getUrl() }}" />
-  <updated>{{ moment(posts[0].date).format("YYYY-MM-DD HH:mm:ss") }}</updated>
-  <id>{{ getUrl() }}</id>
+  <link href="{{ getURL() }}" />
+  <updated>{{ posts[0].date.toISOString() }}</updated>
+  <id>{{ getURL() }}</id>
   {% if siteConfig.author %}
   <author>
     <name>{{ siteConfig.author }}</name>
@@ -18,10 +18,10 @@
   {% for post in posts.slice(0, siteConfig.feed.limit) %}
   <entry>
     <title>{{ post.title }}</title>
-    <link href="{{ getUrl(post.docPath) }}" />
-    <id>{{ getUrl(post.docPath) }}</id>
-    <published>{{ moment(post.date).format("YYYY-MM-DD HH:mm:ss") }}</published>
-    <updated>{{ moment(post.date).format("YYYY-MM-DD HH:mm:ss") }}</updated>
+    <link href="{{ getURL(post.docPath) }}" />
+    <id>{{ getURL(post.docPath) }}</id>
+    <published>{{ post.date.toISOString() }}</published>
+    <updated>{{ post.date.toISOString() }}</updated>
     {% if siteConfig.feed.content and post.content %}
     <content type="html"><![CDATA[{{ removeControlChars(post.content) | safe }}]]></content>
     {% endif %}
@@ -35,10 +35,10 @@
     {% endif %}
     </summary>
     {% for category in post.categories %}
-    <category term="{{ category.name }}" scheme="{{ getUrl(category.docPath) }}" />
+    <category term="{{ category.name }}" scheme="{{ getURL(category.docPath) }}" />
     {% endfor %}
     {% for tag in post.tags %}
-    <category term="{{ tag.name }}" scheme="{{ getUrl(tag.docPath) }}" />
+    <category term="{{ tag.name }}" scheme="{{ getURL(tag.docPath) }}" />
     {% endfor %}
   </entry>
   {% endfor %}

@@ -28,8 +28,8 @@ Router = require("./router")
   paginate,
   sortCategories,
   paginateCategories,
-  getAbsPathFn,
-  getUrlFn
+  getPathFn,
+  getURLFn
 } = require("./utils")
 
 class Hikaru
@@ -354,11 +354,11 @@ class Hikaru
     @processer.register(["post", "page"], (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          getUrl = getUrlFn(
-            @site.get("siteConfig")["baseUrl"],
+          getURL = getURLFn(
+            @site.get("siteConfig")["baseURL"],
             @site.get("siteConfig")["rootDir"]
           )
-          getAbsPath = getAbsPathFn(@site.get("siteConfig")["rootDir"])
+          getPath = getPathFn(@site.get("siteConfig")["rootDir"])
           $ = cheerio.load(p["content"])
           # TOC generate.
           hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
@@ -394,14 +394,14 @@ class Hikaru
           for a in links
             href = $(a).attr("href")
             if new URL(
-              href, @site.get("siteConfig")["baseUrl"]
-            ).host isnt getUrl(p["docPath"]).host
+              href, @site.get("siteConfig")["baseURL"]
+            ).host isnt getURL(p["docPath"]).host
               $(a).attr("target", "_blank")
             if href.startsWith("https://") or href.startsWith("http://") or
             href.startsWith("//") or href.startsWith("/") or
             href.startsWith("javascript:")
               continue
-            $(a).attr("href", getAbsPath(path.join(
+            $(a).attr("href", getPath(path.join(
               path.dirname(p["docPath"]), href
             )))
           imgs = $("img")
@@ -411,7 +411,7 @@ class Hikaru
             src.startsWith("//") or src.startsWith("/") or
             src.startsWith("file:image")
               continue
-            $(i).attr("src", getAbsPath(path.join(
+            $(i).attr("src", getPath(path.join(
               path.dirname(p["docPath"]), src
             )))
           p["content"] = $("body").html()
@@ -532,11 +532,11 @@ class Hikaru
           # Generate search index.
           search = []
           all = site.get("pages").concat(site.get("posts"))
-          getAbsPath = getAbsPathFn(site.get("siteConfig")["rootDir"])
+          getPath = getPathFn(site.get("siteConfig")["rootDir"])
           for p in all
             search.push({
               "title": "#{p["title"]}",
-              "url": getAbsPath(p["docPath"]),
+              "url": getPath(p["docPath"]),
               "content": p["text"]
             })
           site.put("files", {
@@ -562,10 +562,9 @@ class Hikaru
           ), "utf8")
           content = nunjucks.renderString(tmpContent, {
             "posts": site.get("posts"),
-            "moment": moment,
-            "getUrl": getUrlFn(site.get("siteConfig")["baseUrl"],
+            "getURL": getURLFn(site.get("siteConfig")["baseURL"],
             site.get("siteConfig")["rootDir"]),
-            "getAbsPath": getAbsPathFn(site.get("siteConfig")["rootDir"])
+            "getPath": getPathFn(site.get("siteConfig")["rootDir"])
           })
           site.put("files", {
             "docPath": site.get(
@@ -592,11 +591,10 @@ class Hikaru
             "siteConfig": site.get("siteConfig"),
             "themeConfig": site.get("themeConfig"),
             "posts": site.get("posts"),
-            "moment": moment,
             "removeControlChars": removeControlChars,
-            "getUrl": getUrlFn(site.get("siteConfig")["baseUrl"],
+            "getURL": getURLFn(site.get("siteConfig")["baseURL"],
             site.get("siteConfig")["rootDir"]),
-            "getAbsPath": getAbsPathFn(site.get("siteConfig")["rootDir"])
+            "getPath": getPathFn(site.get("siteConfig")["rootDir"])
           })
           site.put("files", {
             "docPath": site.get("siteConfig")["feed"]["path"] or "atom.xml",

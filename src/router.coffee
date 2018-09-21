@@ -11,8 +11,8 @@ chokidar = require("chokidar")
 Promise = require("bluebird")
 
 {
-  getAbsPathFn,
-  getUrlFn,
+  getPathFn,
+  getURLFn,
   getContentType,
   isCurrentPathFn,
   parseFrontMatter
@@ -30,10 +30,10 @@ class Router
     @srcWatcher = null
     @themeWatcher = null
     @unprocessedSite = new Site(@site["workDir"])
-    @getUrl = getUrlFn(
-      @site.get("siteConfig")["baseUrl"], @site.get("siteConfig")["rootDir"]
+    @getURL = getURLFn(
+      @site.get("siteConfig")["baseURL"], @site.get("siteConfig")["rootDir"]
     )
-    @getAbsPath = getAbsPathFn(@site.get("siteConfig")["rootDir"])
+    @getPath = getPathFn(@site.get("siteConfig")["rootDir"])
 
   matchFiles: (pattern, options) ->
     return new Promise((resolve, reject) ->
@@ -124,8 +124,8 @@ class Router
       "siteConfig": @site.get("siteConfig"),
       "themeConfig": @site.get("themeConfig"),
       "moment": moment,
-      "getUrl": @getUrl,
-      "getAbsPath": @getAbsPath,
+      "getURL": @getURL,
+      "getPath": @getPath,
       "isCurrentPath": isCurrentPathFn(
         @site.get("siteConfig")["rootDir"], p["docPath"]
       ),
@@ -188,7 +188,7 @@ class Router
     @_ = {}
     for f in @site.get("assets").concat(@site.get("posts"))
     .concat(@site.get("pages")).concat(@site.get("files"))
-      key = @getAbsPath(f["docPath"])
+      key = @getPath(f["docPath"])
       @logger.debug("Hikaru is building route `#{colors.cyan(key)}`...")
       @_[key] = f
 
@@ -273,7 +273,7 @@ class Router
     server = http.createServer((request, response) =>
       if request["url"] not of @_
         @logger.log("404: #{request["url"]}")
-        res = @_[@getAbsPath("404.html")]
+        res = @_[@getPath("404.html")]
         response.writeHead(404, {
           "Content-Type": getContentType(res["docPath"])
         })
@@ -296,12 +296,12 @@ class Router
     process.prependListener("exit", () =>
       server.close()
       @logger.log(
-        "Hikaru stopped listening on http://#{ip}:#{port}#{@getAbsPath()}..."
+        "Hikaru stopped listening on http://#{ip}:#{port}#{@getPath()}..."
       )
       @unwatchAll()
     )
     @logger.log(
-      "Hikaru is listening on http://#{ip}:#{port}#{@getAbsPath()}..."
+      "Hikaru is listening on http://#{ip}:#{port}#{@getPath()}..."
     )
     if ip isnt "localhost"
       server.listen(port, ip)

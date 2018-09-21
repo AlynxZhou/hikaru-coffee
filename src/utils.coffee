@@ -104,7 +104,7 @@ paginateCategories = (category, parentPath, perPage, ctx) ->
     )
   return results
 
-getAbsPathFn = (rootDir = path.posix.sep) ->
+getPathFn = (rootDir = path.posix.sep) ->
   rootDir = rootDir.replace(path.win32.sep, path.posix.sep)
   return (docPath = "") ->
     if not path.posix.isAbsolute(rootDir)
@@ -115,20 +115,20 @@ getAbsPathFn = (rootDir = path.posix.sep) ->
       rootDir, docPath.replace(path.win32.sep, path.posix.sep)
     ))
 
-getUrlFn = (baseUrl, rootDir = path.posix.sep) ->
-  getAbsPath = getAbsPathFn(rootDir)
+getURLFn = (baseURL, rootDir = path.posix.sep) ->
+  getPath = getPathFn(rootDir)
   return (docPath = "") ->
-    return new URL(getAbsPath(docPath), baseUrl)
+    return new URL(getPath(docPath), baseURL)
 
 isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
   # Must join a "/" before resolve or it will join current work dir.
-  getAbsPath = getAbsPathFn(rootDir)
-  currentPath = getAbsPath(currentPath)
+  getPath = getPathFn(rootDir)
+  currentPath = getPath(currentPath)
   currentToken = path.posix.resolve(path.posix.join(
     path.posix.sep, currentPath.replace(path.win32.sep, path.posix.sep)
   )).split(path.posix.sep)
   return (testPath = "", strict = false) ->
-    testPath = getAbsPath(testPath)
+    testPath = getPath(testPath)
     if currentPath is testPath
       return true
     testToken = path.posix.resolve(path.posix.join(
@@ -150,7 +150,7 @@ module.exports = {
   "paginate": paginate,
   "sortCategories": sortCategories,
   "paginateCategories": paginateCategories,
-  "getAbsPathFn": getAbsPathFn,
-  "getUrlFn": getUrlFn,
+  "getPathFn": getPathFn,
+  "getURLFn": getURLFn,
   "isCurrentPathFn": isCurrentPathFn
 }
