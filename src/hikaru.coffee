@@ -372,7 +372,9 @@ class Hikaru
             hNames.indexOf(h["name"])
               level = level[level.length - 1]["subs"]
             text = $(h).text()
-            escaped = escapeHTML(text).trim()
+            # Remove space in escaped ID because
+            # bootstrap scrollspy cannot support it.
+            escaped = escapeHTML(text).trim().replace(/\s+/, "")
             if headerIds[escaped]
               id = "#{escaped}-#{headerIds[escaped]++}"
             else
