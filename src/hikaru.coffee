@@ -383,8 +383,10 @@ class Hikaru
               "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
               "</a>" + "#{text}"
             )
+            # Don't set archor to absolute path because bootstrap scrollspy
+            # can only accept relative path for ID.
             level.push({
-              "docPath": path.join(path.dirname(p["docPath"]), "##{id}"),
+              "archor": "##{id}",
               "name": h["name"]
               "text": text.trim(),
               "subs": []
