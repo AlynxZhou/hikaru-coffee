@@ -33,6 +33,7 @@ A static site generator that generates routes based on directories naturally.
 - [X] Local search JSON gengrating.
 - [X] RSS feed generating.
 - [X] Porting theme ARIA.
+- [X] Live reloading server.
 
 # Example Dir Structure
 
