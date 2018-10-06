@@ -4,12 +4,12 @@ yaml = require("js-yaml")
 glob = require("glob")
 http = require("http")
 {URL} = require("url")
-Site = require("./site")
 colors = require("colors/safe")
 moment = require("moment")
 chokidar = require("chokidar")
 Promise = require("bluebird")
-
+Site = require("./site")
+File = require("./file")
 {
   getPathFn,
   getURLFn,
@@ -44,39 +44,29 @@ class Router
       )
     )
 
-  readFile: (file) =>
-    @logger.debug("Hikaru is reading `#{colors.cyan(
-      path.join(file["srcDir"], file["srcPath"])
-    )}`...")
-    return fse.readFile(path.join(
-      file["srcDir"], file["srcPath"])
-    ).then((raw) =>
-      # Auto detect if a file is a binary file or a UTF-8 encoding text file.
-      if raw.equals(Buffer.from(raw.toString("utf8"), "utf8"))
-        raw = raw.toString("utf8")
-      return {
-        "srcPath": file["srcPath"],
-        "srcDir": file["srcDir"],
-        "docDir": @site.get("docDir")
-        "text": raw,
-        "raw": raw
-      }
-    )
+  readFile: (file) ->
+    raw = await fse.readFile(path.join(file["srcDir"], file["srcPath"]))
+    # Auto detect if a file is a binary file or a UTF-8 encoding text file.
+    if raw.equals(Buffer.from(raw.toString("utf8"), "utf8"))
+      raw = raw.toString("utf8")
+    file["text"] = raw
+    file["raw"] = raw
+    return file
 
-  writeFile: (file) =>
-    @logger.debug("Hikaru is writing `#{colors.cyan(
-      path.join(@site.get("docDir"), file["docPath"])
-    )}`...")
+  writeFile: (file) ->
     if file["content"] isnt file["raw"]
       return fse.outputFile(
-        path.join(@site.get("docDir"), file["docPath"]), file["content"]
+        path.join(file["docDir"], file["docPath"]), file["content"]
       )
     return fse.copy(
       path.join(file["srcDir"], file["srcPath"]),
-      path.join(@site.get("docDir"), file["docPath"])
+      path.join(file["docDir"], file["docPath"])
     )
 
   loadFile: (file) =>
+    @logger.debug("Hikaru is reading `#{colors.cyan(
+      path.join(file["srcDir"], file["srcPath"])
+    )}`...")
     file = await @readFile(file)
     if file["srcDir"] is @site.get("themeSrcDir")
       file = await @renderer.render(file)
@@ -103,6 +93,12 @@ class Router
         file["type"] = "asset"
         @site.put("assets", file)
     return file
+
+  saveFile: (file) =>
+    @logger.debug("Hikaru is writing `#{colors.cyan(
+      path.join(file["docDir"], file["docPath"])
+    )}`...")
+    return @writeFile(file)
 
   processP: (p) =>
     lang = p["language"] or @site.get("siteConfig")["language"]
@@ -158,14 +154,14 @@ class Router
 
   saveAssets: () =>
     return @site.get("assets").map((asset) =>
-      @writeFile(asset)
+      @saveFile(asset)
       return asset
     )
 
   savePosts: () =>
     return @site.get("posts").map((p) =>
       p["content"] = await @site.get("templates")[p["layout"]]["content"](p)
-      @writeFile(p)
+      @saveFile(p)
       return p
     )
 
@@ -174,13 +170,13 @@ class Router
       if p["layout"] not of @site.get("templates")
         p["layout"] = "page"
       p["content"] = await @site.get("templates")[p["layout"]]["content"](p)
-      @writeFile(p)
+      @saveFile(p)
       return p
     )
 
-  saveFile: () =>
+  saveFiles: () =>
     return @site.get("files").map((file) =>
-      @writeFile(file)
+      @saveFile(file)
       return file
     )
 
@@ -220,7 +216,7 @@ class Router
             ))
         else
           for key in ["assets", "templates"]
-            if @site.splice(key, file)?
+            if @site.del(key, file)?
               break
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
@@ -254,7 +250,7 @@ class Router
             ))
         else
           for key in ["assets", "pages", "posts"]
-            if @site.splice(key, file)?
+            if @site.del(key, file)?
               break
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
@@ -316,13 +312,13 @@ class Router
       "dot": true,
       "cwd": @site.get("themeSrcDir")
     })).map((srcPath) =>
-      return {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
+      return new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
     ).concat((await @matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("srcDir")
     })).map((srcPath) =>
-      return {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
+      return new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
     ))
     await Promise.all(allFiles.map(@loadFile))
     @saveAssets()
@@ -332,7 +328,7 @@ class Router
     @site = await @generator.generate("afterProcessing", @site)
     @savePosts()
     @savePages()
-    @saveFile()
+    @saveFiles()
 
   serve: (ip, port) =>
     allFiles = (await @matchFiles(path.join("**", "*"), {
@@ -340,13 +336,13 @@ class Router
       "dot": true,
       "cwd": @site.get("themeSrcDir")
     })).map((srcPath) =>
-      return {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
+      return new File(@site.get("docDir"),  @site.get("themeSrcDir"), srcPath)
     ).concat((await @matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("srcDir")
     })).map((srcPath) =>
-      return {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
+      return new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
     ))
     await Promise.all(allFiles.map(@loadFile))
     @unprocessedSite.set("pages", @site.get("pages")[0...])

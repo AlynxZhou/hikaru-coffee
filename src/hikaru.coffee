@@ -17,6 +17,7 @@ coffee = require("coffeescript")
 highlight = require("./highlight")
 Logger = require("./logger")
 Site = require("./site")
+File = require("./file")
 Renderer = require("./renderer")
 Processer = require("./processer")
 Generator = require("./generator")
@@ -332,7 +333,7 @@ class Hikaru
     @processer.register("categories", (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          return resolve(Object.assign({}, p, ctx, {
+          return resolve(Object.assign(new File(), p, ctx, {
             "categories": @site.get("categories")
           }))
         catch err
@@ -343,7 +344,7 @@ class Hikaru
     @processer.register("tags", (p, posts, ctx) =>
       return new Promise((resolve, reject) =>
         try
-          return resolve(Object.assign({}, p, ctx, {
+          return resolve(Object.assign(new File(), p, ctx, {
             "tags": @site.get("tags")
           }))
         catch err
@@ -423,7 +424,7 @@ class Hikaru
             split = p["content"].split("<!--more-->")
             p["excerpt"] = split[0]
             p["more"] = split[1]
-          return resolve(Object.assign({}, p, ctx, {"toc": toc, "$": $}))
+          return resolve(Object.assign(new File(), p, ctx, {"toc": toc, "$": $}))
         catch err
           return reject(err)
       )
@@ -465,7 +466,8 @@ class Hikaru
             for p in paginateCategories(
               sub,
               site.get("categoryDir"),
-              site.get("siteConfig")["perPage"]
+              site.get("siteConfig")["perPage"],
+              site
             )
               site.put("pages", p)
           site.set("categories", categories)
@@ -507,14 +509,14 @@ class Hikaru
             tag["posts"].sort((a, b) ->
               return -(a["date"] - b["date"])
             )
-            sp = {
+            sp = Object.assign(new File(site.get("docDir")), {
               "layout": "tag",
               "docPath": path.join(
                 site.get("tagDir"), "#{tag["name"]}", "index.html"
               ),
               "title": "tag",
               "name": tag["name"].toString()
-            }
+            })
             tag["docPath"] = sp["docPath"]
             for p in paginate(
               sp, tag["posts"], site.get("siteConfig")["perPage"]
@@ -543,12 +545,12 @@ class Hikaru
               "url": getPath(p["docPath"]),
               "content": p["text"]
             })
-          site.put("files", {
-            "docPath": site.get(
-              "siteConfig"
-            )["search"]["path"] or "search.json",
-            "content": JSON.stringify(search)
-          })
+          file = new File(site.get("docDir"))
+          file["docPath"] = site.get(
+            "siteConfig"
+          )["search"]["path"] or "search.json"
+          file["content"] = JSON.stringify(search)
+          site.put("files", file)
           return resolve(site)
         catch err
           return reject(err)
@@ -570,12 +572,12 @@ class Hikaru
             site.get("siteConfig")["rootDir"]),
             "getPath": getPathFn(site.get("siteConfig")["rootDir"])
           })
-          site.put("files", {
-            "docPath": site.get(
-              "siteConfig"
-            )["sitemap"]["path"] or "sitemap.xml",
-            "content": content
-          })
+          file = new File(site.get("docDir"))
+          file["docPath"] = site.get(
+            "siteConfig"
+          )["sitemap"]["path"] or "sitemap.xml"
+          file["content"] = content
+          site.put("files", file)
           return resolve(site)
         catch err
           return reject(err)
@@ -600,10 +602,10 @@ class Hikaru
             site.get("siteConfig")["rootDir"]),
             "getPath": getPathFn(site.get("siteConfig")["rootDir"])
           })
-          site.put("files", {
-            "docPath": site.get("siteConfig")["feed"]["path"] or "atom.xml",
-            "content": content
-          })
+          file = new File(site.get("docDir"))
+          file["docPath"] = site.get("siteConfig")["feed"]["path"] or "atom.xml"
+          file["content"] = content
+          site.put("files", file)
           return resolve(site)
         catch err
           return reject(err)

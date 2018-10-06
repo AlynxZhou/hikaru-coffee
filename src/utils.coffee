@@ -2,6 +2,7 @@ fm = require("front-matter")
 path = require("path")
 {URL} = require("url")
 Promise = require("bluebird")
+File = require("./file")
 
 escapeHTML = (str) ->
   return str
@@ -58,10 +59,10 @@ paginate = (p, posts, perPage, ctx) ->
   perPagePosts = []
   for post in posts
     if perPagePosts.length is perPage
-      results.push(Object.assign({}, p, ctx, {"posts": perPagePosts}))
+      results.push(Object.assign(new File(), p, ctx, {"posts": perPagePosts}))
       perPagePosts = []
     perPagePosts.push(post)
-  results.push(Object.assign({}, p, ctx, {"posts": perPagePosts}))
+  results.push(Object.assign(new File(), p, ctx, {"posts": perPagePosts}))
   results[0]["pageArray"] = results
   results[0]["pageIndex"] = 0
   results[0]["docPath"] = p["docPath"]
@@ -86,21 +87,21 @@ sortCategories = (category) ->
   for sub in category["subs"]
     sortCategories(sub)
 
-paginateCategories = (category, parentPath, perPage, ctx) ->
+paginateCategories = (category, parentPath, perPage, site) ->
   results = []
-  sp = {
+  sp = Object.assign(new File(site.get("docDir")), {
     "layout": "category",
     "docPath": path.join(parentPath, "#{category["name"]}", "index.html"),
     "title": "category",
     "name": category["name"].toString()
-  }
+  })
   category["docPath"] = sp["docPath"]
-  results = results.concat(paginate(sp, category["posts"], perPage, ctx))
+  results = results.concat(paginate(sp, category["posts"], perPage))
   for sub in category["subs"]
     results = results.concat(
       paginateCategories(sub, path.join(
         parentPath, "#{category["name"]}"
-      ), perPage, ctx)
+      ), perPage, site)
     )
   return results
 

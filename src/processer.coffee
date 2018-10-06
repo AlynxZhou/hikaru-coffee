@@ -1,5 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
+File = require("./file")
 
 class Processer
   constructor: (logger) ->
@@ -30,6 +31,6 @@ class Processer
       for fn in @_[p["layout"]]
         p = await fn(p, posts, ctx)
       return p
-    return Object.assign({}, p, ctx)
+    return Object.assign(new File(), p, ctx)
 
 module.exports = Processer

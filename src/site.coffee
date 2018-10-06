@@ -35,12 +35,13 @@ class Site
     if not key? or not file?
       return
     for i in [0...@_[key].length]
-      if @_[key][i]["docPath"] is file["docPath"]
+      if @_[key][i]["docPath"] is file["docPath"] and
+      @_[key][i]["docDir"] is file["docDir"]
         @_[key][i] = file
         return
     @_[key].push(file)
 
-  splice: (key, file) =>
+  del: (key, file) =>
     if not key? or not file?
       return null
     for i in [0...@_[key].length]
