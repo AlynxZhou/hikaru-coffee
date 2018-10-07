@@ -1,6 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
-File = require("./file")
+{Site, File, Category, Tag} = require("./type")
 
 class Processer
   constructor: (logger) ->

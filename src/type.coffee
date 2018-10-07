@@ -53,4 +53,41 @@ class Site
   raw: () =>
     return @_
 
-module.exports = Site
+class File
+  constructor: (docDir, srcDir, srcPath) ->
+    @docDir = docDir
+    @docPath = null
+    @srcDir = srcDir
+    @srcPath = srcPath
+    @date = null
+    @title = null
+    @name = null
+    @raw = null
+    @text = null
+    @content = null
+    @type = null
+    @frontMatter = {}
+    @categories = []
+    @tags = []
+    @excerpt = null
+    @more = null
+    @pageArray = []
+    @pageIndex = null
+
+class Category
+  constructor: (name, posts = [], subs = []) ->
+    @name = name
+    @posts = posts
+    @subs = subs
+
+class Tag
+  constructor: (name, posts = []) ->
+    @name = name
+    @posts = posts
+
+module.exports = {
+  "Site": Site,
+  "File": File,
+  "Category": Category,
+  "Tag": Tag
+}

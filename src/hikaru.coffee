@@ -16,8 +16,7 @@ coffee = require("coffeescript")
 
 highlight = require("./highlight")
 Logger = require("./logger")
-Site = require("./site")
-File = require("./file")
+{Site, File, Category, Tag} = require("./type")
 Renderer = require("./renderer")
 Processer = require("./processer")
 Generator = require("./generator")
@@ -424,7 +423,9 @@ class Hikaru
             split = p["content"].split("<!--more-->")
             p["excerpt"] = split[0]
             p["more"] = split[1]
-          return resolve(Object.assign(new File(), p, ctx, {"toc": toc, "$": $}))
+          return resolve(Object.assign(
+            new File(), p, ctx, {"toc": toc, "$": $}
+          ))
         catch err
           return reject(err)
       )
@@ -452,7 +453,7 @@ class Hikaru
                   subCategories = category["subs"]
                   break
               if not found
-                newCate = {"name": cateName, "posts": [post], "subs": []}
+                newCate = new Category(cateName, [post], [])
                 ++categoriesLength
                 postCategories.push(newCate)
                 subCategories.push(newCate)
@@ -497,7 +498,7 @@ class Hikaru
                   tag["posts"].push(post)
                   break
               if not found
-                newTag = {"name": tagName, "posts": [post]}
+                newTag = new Tag(tagName, [post])
                 ++tagsLength
                 postTags.push(newTag)
                 tags.push(newTag)

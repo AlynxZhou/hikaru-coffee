@@ -8,8 +8,7 @@ colors = require("colors/safe")
 moment = require("moment")
 chokidar = require("chokidar")
 Promise = require("bluebird")
-Site = require("./site")
-File = require("./file")
+{Site, File, Category, Tag} = require("./type")
 {
   getPathFn,
   getURLFn,
@@ -100,8 +99,8 @@ class Router
     )}`...")
     return @writeFile(file)
 
-  processP: (p) =>
-    lang = p["language"] or @site.get("siteConfig")["language"]
+  processFile: (f) =>
+    lang = f["language"] or @site.get("siteConfig")["language"]
     if lang not of @translator.list()
       try
         language = yaml.safeLoad(fse.readFileSync(path.join(
@@ -115,7 +114,7 @@ class Router
           @logger.warn(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    ps = await @processer.process(p, @site.get("posts"), {
+    fs = await @processer.process(f, @site.get("posts"), {
       "site": @site.raw(),
       "siteConfig": @site.get("siteConfig"),
       "themeConfig": @site.get("themeConfig"),
@@ -123,22 +122,22 @@ class Router
       "getURL": @getURL,
       "getPath": @getPath,
       "isCurrentPath": isCurrentPathFn(
-        @site.get("siteConfig")["rootDir"], p["docPath"]
+        @site.get("siteConfig")["rootDir"], f["docPath"]
       ),
       "__": @translator.getTranslateFn(lang)
     })
-    if ps not instanceof Array
-      return [ps]
-    return ps
+    if fs not instanceof Array
+      return [fs]
+    return fs
 
   processPosts: () =>
     @site.get("posts").sort((a, b) ->
       return -(a["date"] - b["date"])
     )
     processed = []
-    for p in @site.get("posts")
-      p = await @processP(p)
-      processed = processed.concat(p)
+    for ps in @site.get("posts")
+      ps = await @processFile(ps)
+      processed = processed.concat(ps)
     @site.set("posts", processed)
     for i in [0...@site.get("posts").length]
       if i > 0
@@ -148,7 +147,7 @@ class Router
 
   processPages: () =>
     for ps in @site.get("pages")
-      ps = await @processP(ps)
+      ps = await @processFile(ps)
       for p in ps
         @site.put("pages", p)
 

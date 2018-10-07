@@ -2,7 +2,7 @@ fm = require("front-matter")
 path = require("path")
 {URL} = require("url")
 Promise = require("bluebird")
-File = require("./file")
+{Site, File, Category, Tag} = require("./type")
 
 escapeHTML = (str) ->
   return str
