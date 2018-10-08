@@ -89,4 +89,4 @@ $ hikaru serve|s [options] [dir]
 
 Prev Page: [Write](write.md)
 
-Next Page: [Deplay](deploy.md)
+Next Page: [Deploy](deploy.md)
