@@ -8,28 +8,28 @@ commander
 .description(packageJSON["description"])
 
 commander.command("init [dir]").alias("i")
-.option("-g, --debug", "Print debug messages.")
+.option("-d, --debug", "Print debug messages.")
 .option("-c, --config <yml>", "Alternative config path.")
 .action((dir, cmd) ->
   new Hikaru(cmd["debug"]).init(dir || ".", cmd["config"])
 )
 
 commander.command("clean [dir]").alias("c")
-.option("-g, --debug", "Print debug messages.")
+.option("-d, --debug", "Print debug messages.")
 .option("-c, --config <yml>", "Alternative config path.")
 .action((dir, cmd) ->
   new Hikaru(cmd["debug"]).clean(dir || ".")
 )
 
-commander.command("generate [dir]").alias("g")
-.option("-g, --debug", "Print debug messages.")
+commander.command("build [dir]").alias("b")
+.option("-d, --debug", "Print debug messages.")
 .option("-c, --config <yml>", "Alternative config path.")
 .action((dir, cmd) ->
-  new Hikaru(cmd["debug"]).generate(dir || ".", cmd["config"])
+  new Hikaru(cmd["debug"]).build(dir || ".", cmd["config"])
 )
 
 commander.command("serve [dir]").alias("s")
-.option("-g, --debug", "Print debug messages.")
+.option("-d, --debug", "Print debug messages.")
 .option("-c, --config <yml>", "Alternative config path.")
 .option("-i, --ip <ip>", "Alternative listening IP address.")
 .option("-p, --port <port>", "Alternative listening port.")

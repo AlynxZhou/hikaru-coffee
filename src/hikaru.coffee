@@ -127,11 +127,11 @@ class Hikaru
       )
     )
 
-  generate: (workDir = ".", configPath) =>
+  build: (workDir = ".", configPath) =>
     @loadSite(workDir, configPath)
     @loadModules()
     try
-      await @router.generate()
+      await @router.build()
     catch err
       @logger.warn("Hikaru catched some error during generating!")
       @logger.error(err)

@@ -305,7 +305,7 @@ class Router
     @watchTheme()
     @watchSrc()
 
-  generate: () =>
+  build: () =>
     allFiles = (await @matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,

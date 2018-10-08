@@ -4,80 +4,99 @@ hikaru
 A static site generator that generates routes based on directories naturally.
 -----------------------------------------------------------------------------
 
-- "This world won't need one more static site generator!"
-
-- "But I need."
-
 # Install
+
+Hikaru is a command line program (not a module) and you can install it from NPM:
 
 ```
 # npm i -g hikaru-coffee
 ```
 
-# TODO List
+# Setup site
 
-- [X] Dir based router.
-- [X] Marked Markdown renderer.
-- [X] Stylus CSS renderer.
-- [X] Nunjucks template renderer.
-- [X] Highlight.js code highlight.
-- [X] Async loading, rendering and saving file.
-- [X] Pagination for index, archives, categories (different category pages) and tags (different tag pages).
-- [X] Archives info for templating.
-- [X] Categories info for templating.
-- [X] Tags info for templating.
-- [X] Cheerio-based toc generating.
-- [X] Cheerio-based path converting (relative to absolute).
-- [X] Date operations in templates.
-- [X] sprintf-js based multi-languages support.
-- [X] Local search JSON gengrating.
-- [X] RSS feed generating.
-- [X] Porting theme ARIA.
-- [X] Live reloading server.
-
-# Example Dir Structure
-
-```plain
-hikura-site/
-    |- srcs/ # source dir for user files
-    |   |- images/
-    |   |- css/
-    |   |- js/
-    |   |- index.md
-    |   |- about/
-    |   |   |- index.md
-    |   |- tags/
-    |   |   |- index.md
-    |- docs/ # source will be render to here
-    |   |- images/
-    |   |   |- logo.png
-    |   |- css/
-    |   |   |- index.css
-    |   |- js/
-    |   |   |- index.js
-    |   |- index.html
-    |   |- index-2.html # page 2 of index
-    |   |- index-3.html # page 3 of index
-    |   |- about/
-    |   |   |- index.html
-    |   |- tags/
-    |   |   |- index.html # layout: tags
-    |   |   |- tag-1/
-    |   |   |   |- index.html # automatically generated, layout: tag
-    |   |   |   |- index-2.html # page 2 of tag-1
-    |- themes/
-    |   |- aria/
-    |   |   |- srcs/ # this will be render to docs/
-    |   |   |   |- layout.njk # templates
-    |   |   |   |- index.njk
-    |   |   |   |- tags.njk
-    |   |   |   |- tag.njk
-    |   |   |   |- page.njk # if no layout specific, fallback to this
-    |   |   |   |- css/
-    |   |   |   |   |- index.styl
-    |   |   |   |- js/
-    |   |   |   |   |- index.js
-    |   |   |   |- images/
-    |   |   |   |   |- logo.png
-    |   |- README.md
 ```
+$ hikaru i hikaru-site
+$ cd hikaru-site
+```
+
+# Install theme
+
+## Clone theme
+
+Using `hikaru-theme-aria` as example:
+
+```
+$ git clone https://github.com/AlynxZhou/hikaru-theme-aria.git themes/aria
+```
+
+Or if you want commit the whole site you can use submodule:
+
+```
+$ git submodule add https://github.com/AlynxZhou/hikaru-theme-aria.git themes/aria
+```
+
+## Edit config
+
+```
+$ $EDITOR config.yml
+```
+
+Set `themeDir` to `aria`
+
+```yaml
+themeDir: aria
+```
+
+Don't forget to config your theme as its README file.
+
+# Create src file
+
+## Edit file
+
+```
+$ $EDITOR srcs/my-first-post.md
+```
+
+## Add front matter
+
+```yaml
+---
+title: My First Post
+date: 2018-08-08 09:27:00
+layout: post
+---
+```
+
+## Add content
+
+```markdown
+Some content...
+
+<!--more-->
+
+# This is my first post!
+```
+
+# Start live server
+
+```
+$ hikaru s
+```
+
+# Build static files
+
+```
+$ hikaru b
+```
+
+# More
+
+Docs (Work in progress): [Here](docs/en/index.md)
+
+Default theme ARIA: [hikaru-themes-aria](https://github.com/AlynxZhou/hikaru-theme-aria/)
+
+My blog built with Hikaru and ARIA: [喵's StackHarbor](https://sh.alynx.xyz/)
+
+# License
+
+[Apache-2.0](LICENSE)
