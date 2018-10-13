@@ -57,42 +57,42 @@ class Hikaru
         configPath or path.join(workDir, "config.yml")
       )}`.")
       @logger.debug("Hikaru is creating `#{colors.cyan(
-        path.join(workDir, "src", path.sep)
+        path.join(workDir, "srcs", path.sep)
       )}`.")
-      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
-        workDir, "doc", path.sep
-      ))}`.")
-      @logger.debug("Hikaru is creating `#{colors.cyan(path.join(
-        workDir, "themes", path.sep
-      ))}`.")
+      @logger.debug("Hikaru is creating `#{colors.cyan(
+        path.join(workDir, "docs", path.sep)
+      )}`.")
+      @logger.debug("Hikaru is creating `#{colors.cyan(
+        path.join(workDir, "themes", path.sep)
+      )}`.")
       fse.copy(
         path.join(__dirname, "..", "dist", "config.yml"),
         configPath or path.join(workDir, "config.yml")
       )
-      fse.mkdirp(path.join(workDir, "src")).then(() =>
+      fse.mkdirp(path.join(workDir, "srcs")).then(() =>
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "src", "archives", "index.md"
+          workDir, "srcs", "archives", "index.md"
         ))}`.")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "src", "categories", "index.md"
+          workDir, "srcs", "categories", "index.md"
         ))}`.")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "src", "tags", "index.md"
+          workDir, "srcs", "tags", "index.md"
         ))}`.")
         fse.copy(
           path.join(__dirname, "..", "dist", "archives.md"),
-          path.join(workDir, "src", "archives", "index.md")
+          path.join(workDir, "srcs", "archives", "index.md")
         )
         fse.copy(
           path.join(__dirname, "..", "dist", "categories.md"),
-          path.join(workDir, "src", "categories", "index.md")
+          path.join(workDir, "srcs", "categories", "index.md")
         )
         fse.copy(
           path.join(__dirname, "..", "dist", "tags.md"),
-          path.join(workDir, "src", "tags", "index.md")
+          path.join(workDir, "srcs", "tags", "index.md")
         )
       )
-      fse.mkdirp(path.join(workDir, "doc"))
+      fse.mkdirp(path.join(workDir, "docs"))
       fse.mkdirp(path.join(workDir, "themes"))
     ).catch((err) =>
       @logger.warn("Hikaru catched some error during initializing!")
