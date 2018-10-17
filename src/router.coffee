@@ -201,7 +201,7 @@ class Router
         )
         @site.set("pages", @unprocessedSite.get("pages"))
         @unprocessedSite.set("pages", @site.get("pages")[0...])
-        file = {"srcDir": @site.get("themeSrcDir"), "srcPath": srcPath}
+        file = new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
         if event isnt "unlink"
           file = await @loadFile(file)
           if file["type"] is "template"
@@ -238,7 +238,7 @@ class Router
         )
         @site.set("pages", @unprocessedSite.get("pages"))
         @unprocessedSite.set("pages", @site.get("pages")[0...])
-        file = {"srcDir": @site.get("srcDir"), "srcPath": srcPath}
+        file = new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
         if event isnt "unlink"
           file = await @loadFile(file)
           if file["type"] is "asset"

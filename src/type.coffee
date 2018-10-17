@@ -37,6 +37,8 @@ class Site
     for i in [0...@_[key].length]
       if @_[key][i]["docPath"] is file["docPath"] and
       @_[key][i]["docDir"] is file["docDir"]
+        if key is "posts"
+          console.log(file)
         @_[key][i] = file
         return
     @_[key].push(file)
