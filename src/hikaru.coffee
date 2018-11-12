@@ -400,6 +400,8 @@ class Hikaru
           links = $("a")
           for a in links
             href = $(a).attr("href")
+            if not href?
+              continue
             if new URL(
               href, @site.get("siteConfig")["baseURL"]
             ).host isnt getURL(p["docPath"]).host
@@ -414,6 +416,8 @@ class Hikaru
           imgs = $("img")
           for i in imgs
             src = $(i).attr("src")
+            if not src?
+              continue
             if src.startsWith("https://") or src.startsWith("http://") or
             src.startsWith("//") or src.startsWith("/") or
             src.startsWith("file:image")
