@@ -426,6 +426,7 @@ class Hikaru
             split = p["content"].split("<!--more-->")
             p["excerpt"] = split[0]
             p["more"] = split[1]
+            p["content"] = split.join("<a id=\"more\"></a>")
           return resolve(Object.assign(
             new File(), p, ctx, {"toc": toc, "$": $}
           ))
