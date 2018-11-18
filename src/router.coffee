@@ -7,6 +7,7 @@ http = require("http")
 colors = require("colors/safe")
 moment = require("moment")
 chokidar = require("chokidar")
+packageJSON = require("../package.json")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./type")
 {
@@ -269,6 +270,25 @@ class Router
       if request["url"] not of @_
         @logger.log("404: #{request["url"]}")
         res = @_[@getPath("404.html")]
+        if not res?
+          res = {
+            "content": """
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta charset="utf-8">
+                  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+                  <title>404 Not Found</title>
+                </head>
+                <body>
+                  <h1>404 Not Found</h1>
+                  <p>Hikaru v#{packageJSON["version"]}</p>
+                </body>
+              </html>
+            """,
+            "docPath": @getPath("404.html")
+          }
         response.writeHead(404, {
           "Content-Type": getContentType(res["docPath"])
         })

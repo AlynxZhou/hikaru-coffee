@@ -6,7 +6,9 @@
   <link href="{{ getURL(siteConfig.feed.path or "atom.xml") }}" rel="self" />
   {% if siteConfig.feed.hub %}<link href="{{ siteConfig.feed.hub }}" rel="hub"/>{% endif %}
   <link href="{{ getURL() }}" />
+  {% if posts != null and posts.length > 0 %}
   <updated>{{ posts[0].date.toISOString() }}</updated>
+  {% endif %}
   <id>{{ getURL() }}</id>
   {% if siteConfig.author %}
   <author>
