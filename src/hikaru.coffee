@@ -75,6 +75,9 @@ class Hikaru
       )
       fse.mkdirp(path.join(workDir, "srcs")).then(() =>
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
+          workDir, "srcs", "index.md"
+        ))}`.")
+        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "archives", "index.md"
         ))}`.")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
@@ -83,6 +86,10 @@ class Hikaru
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "tags", "index.md"
         ))}`.")
+        fse.copy(
+          path.join(__dirname, "..", "dist", "index.md"),
+          path.join(workDir, "srcs", "index.md")
+        )
         fse.copy(
           path.join(__dirname, "..", "dist", "archives.md"),
           path.join(workDir, "srcs", "archives", "index.md")
@@ -187,6 +194,7 @@ class Hikaru
     catch err
       if err["code"] is "ENOENT"
         @logger.warn("Hikaru continues with a empty theme config...")
+        @site.set("themeConfig", [])
     @site.set(
       "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
     )
