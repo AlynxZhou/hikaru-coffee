@@ -143,6 +143,85 @@ isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
         return false
     return true
 
+resolveHeaderIds = ($) ->
+  hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
+  headings = $(hNames.join(", "))
+  headerIds = {}
+  for h in headings
+    text = $(h).text()
+    # Remove some chars in escaped ID because
+    # bootstrap scrollspy cannot support it.
+    escaped = escapeHTML(text).trim().replace(
+      /[\s\(\)\[\]{}<>\.,\!\@#\$%\^&\*=\|`"'/\?~]+/g,
+      ""
+    )
+    if headerIds[escaped]
+      id = "#{escaped}-#{headerIds[escaped]++}"
+    else
+      id = escaped
+      headerIds[escaped] = 1
+    $(h).attr("id", "#{id}")
+    $(h).html(
+      "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
+      "</a>" + "#{text}"
+    )
+
+genToc = ($) ->
+  # TOC generate.
+  hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
+  headings = $(hNames.join(", "))
+  toc = []
+  for h in headings
+    level = toc
+    while level.length > 0 and
+    hNames.indexOf(level[level.length - 1]["name"]) <
+    hNames.indexOf(h["name"])
+      level = level[level.length - 1]["subs"]
+    # Don't set archor to absolute path because bootstrap scrollspy
+    # can only accept relative path for ID.
+    level.push({
+      "archor": "##{$(h).attr("id")}",
+      "name": h["name"]
+      "text": $(h).text().trim(),
+      "subs": []
+    })
+  return toc
+
+resolveLink = ($, baseURL, rootDir, docPath) ->
+  getURL = getURLFn(baseURL, rootDir)
+  getPath = getPathFn(rootDir)
+  # Replace relative path to absolute path.
+  links = $("a")
+  for a in links
+    href = $(a).attr("href")
+    if not href?
+      continue
+    if new URL(href, baseURL).host isnt getURL(docPath).host
+      $(a).attr("target", "_blank")
+    if href.startsWith("https://") or href.startsWith("http://") or
+    href.startsWith("//") or href.startsWith("/") or
+    href.startsWith("javascript:")
+      continue
+    $(a).attr("href", getPath(path.join(
+      path.dirname(docPath), href
+    )))
+
+resolveImage = ($, rootDir, docPath) ->
+  getPath = getPathFn(rootDir)
+  # Replace relative path to absolute path.
+  imgs = $("img")
+  for i in imgs
+    src = $(i).attr("src")
+    if not src?
+      continue
+    if src.startsWith("https://") or src.startsWith("http://") or
+    src.startsWith("//") or src.startsWith("/") or
+    src.startsWith("file:image")
+      continue
+    $(i).attr("src", getPath(path.join(
+      path.dirname(docPath), src
+    )))
+
 module.exports = {
   "escapeHTML": escapeHTML,
   "removeControlChars": removeControlChars,
@@ -153,5 +232,9 @@ module.exports = {
   "paginateCategories": paginateCategories,
   "getPathFn": getPathFn,
   "getURLFn": getURLFn,
-  "isCurrentPathFn": isCurrentPathFn
+  "isCurrentPathFn": isCurrentPathFn,
+  "resolveHeaderIds": resolveHeaderIds,
+  "resolveLink": resolveLink,
+  "resolveImage": resolveImage,
+  "genToc": genToc
 }

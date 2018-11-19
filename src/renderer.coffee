@@ -38,16 +38,12 @@ class Renderer
           file["srcPath"]
         )}`...")
       return @_[srcExt]["fn"](file, ctx)
-    return new Promise((resolve, reject) =>
-      try
-        file["docPath"] = file["srcPath"]
-        @logger.debug("Hikaru is rendering `#{colors.cyan(
-          file["srcPath"]
-        )}`...")
-        file["content"] = file["raw"]
-        resolve(file)
-      catch err
-        reject(err)
-    )
+    # Or if file has no registered renderer...
+    file["docPath"] = file["srcPath"]
+    @logger.debug("Hikaru is rendering `#{colors.cyan(
+      file["srcPath"]
+    )}`...")
+    file["content"] = file["raw"]
+    return file
 
 module.exports = Renderer
