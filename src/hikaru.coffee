@@ -246,6 +246,11 @@ class Hikaru
       return file
     )
 
+    @renderer.register(".html", ".html", (file, ctx) ->
+      file["content"] = file["text"]
+      return file
+    )
+
     markedConfig = Object.assign({
       "gfm": true,
       "langPrefix": "",
@@ -258,11 +263,8 @@ class Hikaru
     }, @site.get("siteConfig")["marked"])
     marked.setOptions(markedConfig)
     @renderer.register(".md", ".html", (file, ctx) ->
-      try
-        file["content"] = marked(file["text"])
-        return file
-      catch err
-        throw err
+      file["content"] = marked(file["text"])
+      return file
     )
 
     stylConfig = @site.get("siteConfig")["stylus"] or {}
