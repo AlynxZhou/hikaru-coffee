@@ -136,10 +136,7 @@ class Hikaru
       return
     matchFiles("*", {
       "cwd": path.join(workDir, siteConfig["docDir"])
-    }).then((err, res) =>
-      if err?
-        throw err
-        return
+    }).then((res) =>
       return res.map((r) =>
         fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>
           if stats.isDirectory()
@@ -151,11 +148,11 @@ class Hikaru
               workDir, siteConfig["docDir"], r
             ))}`...")
           return fse.remove(path.join(workDir, siteConfig["docDir"], r))
-        ).catch((err) =>
-          @logger.warn("Hikaru catched some error during cleaning!")
-          @logger.error(err)
         )
       )
+    ).catch((err) =>
+      @logger.warn("Hikaru catched some error during cleaning!")
+      @logger.error(err)
     )
 
   build: (workDir = ".", configPath) =>
