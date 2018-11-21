@@ -4,12 +4,13 @@ Deploy Site
 # TOC
 
 - For Users
-	- [Install](install.md)
-	- [Init](init.md)
-	- [Config](config.md)
-	- [Write](write.md)
-	- [Command](command.md)
-	- [Deploy](deploy.md)
+    - [Install](install.md)
+    - [Init](init.md)
+    - [Config](config.md)
+    - [Write](write.md)
+    - [Command](command.md)
+    - [Deploy](deploy.md)
+    - [Plugins and Scripts](plugins-and-scripts.md)
 
 As you see, Hikaru does not provide a built-in `deploy` command. However, due to the simple structure it use, it is easy to deploy by yourself, because you can use tools you like to upload doc dir.
 

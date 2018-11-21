@@ -4,13 +4,13 @@ Plugins and Scripts
 # TOC
 
 - For Users
-	- [Install](install.md)
-	- [Init](init.md)
-	- [Config](config.md)
-	- [Write](write.md)
-	- [Command](command.md)
-	- [Deploy](deploy.md)
-	- [Plugins and Scripts](plugins-and-scripts.md)
+    - [Install](install.md)
+    - [Init](init.md)
+    - [Config](config.md)
+    - [Write](write.md)
+    - [Command](command.md)
+    - [Deploy](deploy.md)
+    - [Plugins and Scripts](plugins-and-scripts.md)
 
 For some users and developers, they may need some custom functions for their sites or themes, however we cannot add all those to Hikaru, so we support plugins and scripts for them.
 

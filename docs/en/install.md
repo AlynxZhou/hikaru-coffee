@@ -4,12 +4,13 @@ Install Hikaru
 # TOC
 
 - For Users
-	- [Install](install.md)
-	- [Init](init.md)
-	- [Config](config.md)
-	- [Write](write.md)
-	- [Command](command.md)
-	- [Deploy](deploy.md)
+    - [Install](install.md)
+    - [Init](init.md)
+    - [Config](config.md)
+    - [Write](write.md)
+    - [Command](command.md)
+    - [Deploy](deploy.md)
+    - [Plugins and Scripts](plugins-and-scripts.md)
 
 # Dependences
 
