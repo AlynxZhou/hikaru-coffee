@@ -1,7 +1,6 @@
 fse = require("fs-extra")
 path = require("path")
 yaml = require("js-yaml")
-glob = require("glob")
 http = require("http")
 {URL} = require("url")
 colors = require("colors/safe")
@@ -11,6 +10,7 @@ packageJSON = require("../package.json")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./type")
 {
+  matchFiles,
   getPathFn,
   getURLFn,
   getContentType,
@@ -34,15 +34,6 @@ class Router
       @site.get("siteConfig")["baseURL"], @site.get("siteConfig")["rootDir"]
     )
     @getPath = getPathFn(@site.get("siteConfig")["rootDir"])
-
-  matchFiles: (pattern, options) ->
-    return new Promise((resolve, reject) ->
-      glob(pattern, options, (err, res) ->
-        if err
-          return reject(err)
-        return resolve(res)
-      )
-    )
 
   readFile: (file) ->
     raw = await fse.readFile(path.join(file["srcDir"], file["srcPath"]))
@@ -330,13 +321,13 @@ class Router
     @watchSrc()
 
   build: () =>
-    allFiles = (await @matchFiles(path.join("**", "*"), {
+    allFiles = (await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("themeSrcDir")
     })).map((srcPath) =>
       return new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
-    ).concat((await @matchFiles(path.join("**", "*"), {
+    ).concat((await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("srcDir")
@@ -354,13 +345,13 @@ class Router
     @saveFiles()
 
   serve: (ip, port) =>
-    allFiles = (await @matchFiles(path.join("**", "*"), {
+    allFiles = (await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("themeSrcDir")
     })).map((srcPath) =>
       return new File(@site.get("docDir"),  @site.get("themeSrcDir"), srcPath)
-    ).concat((await @matchFiles(path.join("**", "*"), {
+    ).concat((await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
       "cwd": @site.get("srcDir")

@@ -1,8 +1,10 @@
 fm = require("front-matter")
 path = require("path")
+glob = require("glob")
 {URL} = require("url")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./type")
+highlight = require("./highlight")
 
 escapeHTML = (str) ->
   return str
@@ -11,6 +13,15 @@ escapeHTML = (str) ->
   .replace(/>/g, "&gt;")
   .replace(/"/g, "&quot;")
   .replace(/"/g, "&#039;")
+
+matchFiles = (pattern, options) ->
+  return new Promise((resolve, reject) ->
+    glob(pattern, options, (err, res) ->
+      if err?
+        return reject(err)
+      return resolve(res)
+    )
+  )
 
 removeControlChars = (str) ->
   return str.replace(/[\x00-\x1F\x7F]/g, "")
@@ -224,6 +235,7 @@ resolveImage = ($, rootDir, docPath) ->
 
 module.exports = {
   "escapeHTML": escapeHTML,
+  "matchFiles": matchFiles,
   "removeControlChars": removeControlChars,
   "parseFrontMatter": parseFrontMatter,
   "getContentType": getContentType,
@@ -236,5 +248,6 @@ module.exports = {
   "resolveHeaderIds": resolveHeaderIds,
   "resolveLink": resolveLink,
   "resolveImage": resolveImage,
-  "genToc": genToc
+  "genToc": genToc,
+  "highlight": highlight
 }

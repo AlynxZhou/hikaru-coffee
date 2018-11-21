@@ -1,7 +1,6 @@
 fse = require("fs-extra")
 path = require("path")
 {URL} = require("url")
-glob = require("glob")
 cheerio = require("cheerio")
 moment = require("moment")
 colors = require("colors/safe")
@@ -12,9 +11,7 @@ nunjucks = require("nunjucks")
 marked = require("marked")
 stylus = require("stylus")
 nib = require("nib")
-coffee = require("coffeescript")
 
-highlight = require("./highlight")
 Logger = require("./logger")
 {Site, File, Category, Tag} = require("./type")
 Renderer = require("./renderer")
@@ -22,8 +19,10 @@ Processer = require("./processer")
 Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
+utils = require("./utils")
 {
   escapeHTML,
+  matchFiles,
   removeControlChars,
   paginate,
   sortCategories,
@@ -33,14 +32,16 @@ Router = require("./router")
   resolveHeaderIds,
   resolveLink,
   resolveImage,
-  genToc
-} = require("./utils")
+  genToc,
+  highlight
+} = utils
 
 class Hikaru
   constructor: (debug = false) ->
     @debug = debug
     @logger = new Logger(@debug)
     @logger.debug("Hikaru is starting...")
+    @utils = utils
     process.on("exit", () =>
       @logger.debug("Hikaru is stopping...")
     )
@@ -59,33 +60,50 @@ class Hikaru
     return fse.mkdirp(workDir).then(() =>
       @logger.debug("Hikaru is copying `#{colors.cyan(
         configPath or path.join(workDir, "config.yml")
-      )}`.")
+      )}`...")
+      @logger.debug("Hikaru is copying `#{colors.cyan(
+        path.join(workDir, "package.json")
+      )}`...")
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "srcs", path.sep)
-      )}`.")
+      )}`...")
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "docs", path.sep)
-      )}`.")
+      )}`...")
       @logger.debug("Hikaru is creating `#{colors.cyan(
         path.join(workDir, "themes", path.sep)
-      )}`.")
+      )}`...")
+      @logger.debug("Hikaru is creating `#{colors.cyan(
+        path.join(workDir, "scripts", path.sep)
+      )}`...")
       fse.copy(
         path.join(__dirname, "..", "dist", "config.yml"),
         configPath or path.join(workDir, "config.yml")
       )
+      fse.readFile(
+        path.join(__dirname, "..", "dist", "package.json")
+      ).then((text) ->
+        json = JSON.parse(text)
+        # Set package name to site dir name.
+        json["name"] = path.relative("..", ".")
+        return fse.writeFile(
+          path.join(workDir, "package.json"),
+          JSON.stringify(json, null, "  ")
+        )
+      )
       fse.mkdirp(path.join(workDir, "srcs")).then(() =>
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "index.md"
-        ))}`.")
+        ))}`...")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "archives", "index.md"
-        ))}`.")
+        ))}`...")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "categories", "index.md"
-        ))}`.")
+        ))}`...")
         @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
           workDir, "srcs", "tags", "index.md"
-        ))}`.")
+        ))}`...")
         fse.copy(
           path.join(__dirname, "..", "dist", "index.md"),
           path.join(workDir, "srcs", "index.md")
@@ -105,6 +123,7 @@ class Hikaru
       )
       fse.mkdirp(path.join(workDir, "docs"))
       fse.mkdirp(path.join(workDir, "themes"))
+      fse.mkdirp(path.join(workDir, "scripts"))
     ).catch((err) =>
       @logger.warn("Hikaru catched some error during initializing!")
       @logger.error(err)
@@ -115,21 +134,22 @@ class Hikaru
     siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     if not siteConfig?["docDir"]?
       return
-    glob("*", {
+    matchFiles("*", {
       "cwd": path.join(workDir, siteConfig["docDir"])
-    }, (err, res) =>
-      if err
-        return err
+    }).then((err, res) =>
+      if err?
+        throw err
+        return
       return res.map((r) =>
         fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>
           if stats.isDirectory()
             @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
               workDir, siteConfig["docDir"], r, path.sep
-            ))}`.")
+            ))}`...")
           else
             @logger.debug("Hikaru is removing `#{colors.cyan(path.join(
               workDir, siteConfig["docDir"], r
-            ))}`.")
+            ))}`...")
           return fse.remove(path.join(workDir, siteConfig["docDir"], r))
         ).catch((err) =>
           @logger.warn("Hikaru catched some error during cleaning!")
@@ -141,6 +161,8 @@ class Hikaru
   build: (workDir = ".", configPath) =>
     @loadSite(workDir, configPath)
     @loadModules()
+    @loadPlugins()
+    @loadScripts()
     try
       process.on("unhandledRejection", (err) =>
         @logger.warn("Hikaru catched some error during generating!")
@@ -156,6 +178,8 @@ class Hikaru
   serve: (workDir = ".", configPath, ip, port) =>
     @loadSite(workDir, configPath)
     @loadModules()
+    @loadPlugins()
+    @loadScripts()
     try
       process.on("unhandledRejection", (err) =>
         @logger.warn("Hikaru catched some error during serving!")
@@ -226,6 +250,49 @@ class Hikaru
       @logger.warn("Hikaru cannot register internal functions!")
       @logger.error(err)
       process.exit(-2)
+
+  # Load local plugins for site.
+  loadPlugins: () =>
+    siteJsonPath = path.join(@site.get("workDir"), "package.json")
+    if not fse.existsSync(siteJsonPath)
+      return
+    modules = JSON.parse(await fse.readFile(siteJsonPath))["dependencies"]
+    if not modules?
+      return
+    return Object.keys(modules).filter((name) ->
+      return /^hikaru-/.test(name)
+    ).map((name) =>
+      @logger.debug("Hikaru is loading plugin `#{colors.cyan(name)}`...")
+      return require(require.resolve(name, {"paths": [
+        @site.get("workDir"),
+        ".",
+        __dirname
+      ]}))(this)
+    )
+
+  # Load local scripts for site and theme.
+  loadScripts: () =>
+    scripts = (await matchFiles(path.join("**", "*.js"), {
+      "nodir": true,
+      "cwd": path.join(@site.get("workDir"), "scripts")
+    })).map((filename) =>
+      return path.join(@site.get("workDir"), "scripts", filename)
+    ).concat((await matchFiles(path.join("**", "*.js"), {
+      "nodir": true,
+      "cwd": path.join(@site.get("themeDir"), "scripts")
+    })).map((filename) =>
+      return path.join(@site.get("themeDir"), "scripts", filename)
+    ))
+    return scripts.map((name) =>
+      @logger.debug("Hikaru is loading script `#{
+        colors.cyan(path.basename(name))
+      }`...")
+      return require(require.resolve(name, {"paths": [
+        @site.get("workDir"),
+        ".",
+        __dirname
+      ]}))(this)
+    )
 
   registerInternalRenderers: () =>
     njkConfig = Object.assign(
@@ -303,12 +370,6 @@ class Hikaru
           return resolve(file)
         )
       )
-    )
-
-    coffeeConfig = @site.get("siteConfig")["coffeescript"] or {}
-    @renderer.register(".coffee", ".js", (file, ctx) ->
-      file["content"] = coffee.compile(file["text"], coffeeConfig)
-      return file
     )
 
   registerInternalProcessers: () =>
