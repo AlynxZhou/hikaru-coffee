@@ -44,11 +44,13 @@ As the subtitle, it's a static site generator, based on markdown, CSS preprocess
 - [X] RSS feed generating.
 - [X] Port theme ARIA.
 - [X] Live reloading server.
+- [X] Per-site plugins and scripts.
 
 # Example Dir Structure
 
 ```plain
 hikura-site/
+    |- scripts/ # custom scripts
     |- srcs/ # source dir for user files
     |   |- images/
     |   |- css/
@@ -77,6 +79,7 @@ hikura-site/
     |   |   |   |- index-2.html # page 2 of tag-1
     |- themes/
     |   |- aria/
+    |   |   |- scripts/ # custom scripts
     |   |   |- srcs/ # this will be render to docs/
     |   |   |   |- layout.njk # templates
     |   |   |   |- index.njk
@@ -90,4 +93,5 @@ hikura-site/
     |   |   |   |- images/
     |   |   |   |   |- logo.png
     |   |- README.md
+    |- package.json # store site plugin list
 ```

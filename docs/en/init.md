@@ -30,6 +30,14 @@ hikura-site/
     |- config.yml
 ```
 
+# Install plugins
+
+Just run one command.
+
+```
+$ npm install
+```
+
 # Install theme
 
 Before rendering, you need a theme as a template.

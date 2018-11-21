@@ -11,7 +11,7 @@ Write Site
 	- [Command](command.md)
 	- [Deploy](deploy.md)
 
-Hikaru won't create pages and posts, however, they have a readable format and you can create them by yourself.
+Hikaru won't create pages and posts for you, however, they have a readable format and you can create them by yourself.
 
 # Example file
 

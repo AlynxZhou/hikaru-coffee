@@ -94,3 +94,5 @@ git push -u origin master
 Don't forget to go to your GitHub Repo settings and choose `master branch /docs folder` to host pages.
 
 Prev Page: [Command](command.md)
+
+Next Page: [Plugins and Scripts](plugins-and-scripts.md)

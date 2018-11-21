@@ -17,6 +17,7 @@ Hikaru is a command line program (not a module) and you can install it from NPM:
 ```
 $ hikaru i hikaru-site
 $ cd hikaru-site
+$ npm install
 ```
 
 # Install theme
