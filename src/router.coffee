@@ -8,7 +8,7 @@ moment = require("moment")
 chokidar = require("chokidar")
 packageJSON = require("../package.json")
 Promise = require("bluebird")
-{Site, File, Category, Tag} = require("./type")
+{Site, File, Category, Tag} = require("./types")
 {
   matchFiles,
   getPathFn,

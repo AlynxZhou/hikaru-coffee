@@ -3,7 +3,7 @@ path = require("path")
 glob = require("glob")
 {URL} = require("url")
 Promise = require("bluebird")
-{Site, File, Category, Tag} = require("./type")
+{Site, File, Category, Tag} = require("./types")
 highlight = require("./highlight")
 
 escapeHTML = (str) ->

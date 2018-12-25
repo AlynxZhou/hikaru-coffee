@@ -13,12 +13,13 @@ stylus = require("stylus")
 nib = require("nib")
 
 Logger = require("./logger")
-{Site, File, Category, Tag} = require("./type")
 Renderer = require("./renderer")
 Processer = require("./processer")
 Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
+types = require("./types")
+{Site, File, Category, Tag} = types
 utils = require("./utils")
 {
   escapeHTML,
@@ -41,6 +42,7 @@ class Hikaru
     @debug = debug
     @logger = new Logger(@debug)
     @logger.debug("Hikaru is starting...")
+    @types = types
     @utils = utils
     process.on("exit", () =>
       @logger.debug("Hikaru is stopping...")
@@ -509,73 +511,6 @@ class Hikaru
           site.put("pages", p)
       site.set("tags", tags)
       site.set("tagsLength", tagsLength)
-      return site
-    )
-
-    @generator.register("afterProcessing", (site) ->
-      if not site.get("siteConfig")["search"]["enable"]
-        return site
-      # Generate search index.
-      search = []
-      all = site.get("pages").concat(site.get("posts"))
-      getPath = getPathFn(site.get("siteConfig")["rootDir"])
-      for p in all
-        search.push({
-          "title": "#{p["title"]}",
-          "url": getPath(p["docPath"]),
-          "content": p["text"]
-        })
-      file = new File(site.get("docDir"))
-      file["docPath"] = site.get(
-        "siteConfig"
-      )["search"]["path"] or "search.json"
-      file["content"] = JSON.stringify(search)
-      site.put("files", file)
-      return site
-    )
-
-    @generator.register("afterProcessing", (site) ->
-      if not site.get("siteConfig")["sitemap"]["enable"]
-        return site
-      # Generate sitemap.
-      tmpContent = fse.readFileSync(path.join(
-        __dirname, "..", "dist", "sitemap.njk"
-      ), "utf8")
-      content = nunjucks.renderString(tmpContent, {
-        "posts": site.get("posts"),
-        "getURL": getURLFn(site.get("siteConfig")["baseURL"],
-        site.get("siteConfig")["rootDir"]),
-        "getPath": getPathFn(site.get("siteConfig")["rootDir"])
-      })
-      file = new File(site.get("docDir"))
-      file["docPath"] = site.get(
-        "siteConfig"
-      )["sitemap"]["path"] or "sitemap.xml"
-      file["content"] = content
-      site.put("files", file)
-      return site
-    )
-
-    @generator.register("afterProcessing", (site) ->
-      if not site.get("siteConfig")["feed"]["enable"]
-        return resolve(site)
-      # Generate RSS feed.
-      tmpContent = fse.readFileSync(path.join(
-        __dirname, "..", "dist", "atom.njk"
-      ), "utf8")
-      content = nunjucks.renderString(tmpContent, {
-        "siteConfig": site.get("siteConfig"),
-        "themeConfig": site.get("themeConfig"),
-        "posts": site.get("posts"),
-        "removeControlChars": removeControlChars,
-        "getURL": getURLFn(site.get("siteConfig")["baseURL"],
-        site.get("siteConfig")["rootDir"]),
-        "getPath": getPathFn(site.get("siteConfig")["rootDir"])
-      })
-      file = new File(site.get("docDir"))
-      file["docPath"] = site.get("siteConfig")["feed"]["path"] or "atom.xml"
-      file["content"] = content
-      site.put("files", file)
       return site
     )
 

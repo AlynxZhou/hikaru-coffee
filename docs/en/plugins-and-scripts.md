@@ -36,6 +36,6 @@ They must export a main function like scripts, this will be the entry of a plugi
 
 You are supposed to hint the plugin type with words like `renderer`, `generator`, `processer` or `utils`.
 
-For more example, you can read the code of [hikaru-renderer-coffeescript](https://github.com/AlynxZhou/hikaru-renderer-coffeescript/).
+For more example, you can read the code of [hikaru-renderer-coffeescript](https://github.com/AlynxZhou/hikaru-renderer-coffeescript/), [hikaru-generator-feed](https://github.com/AlynxZhou/hikaru-generator-feed/).
 
 Prev Page: [Deploy](deploy.md)
