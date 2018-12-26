@@ -5,6 +5,7 @@ glob = require("glob")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 highlight = require("./highlight")
+packageJSON = require("../package.json")
 
 escapeHTML = (str) ->
   return str
@@ -233,6 +234,9 @@ resolveImage = ($, rootDir, docPath) ->
       path.dirname(docPath), src
     )))
 
+getVersion = () ->
+  return packageJSON["version"]
+
 module.exports = {
   "escapeHTML": escapeHTML,
   "matchFiles": matchFiles,
@@ -249,5 +253,6 @@ module.exports = {
   "resolveLink": resolveLink,
   "resolveImage": resolveImage,
   "genToc": genToc,
+  "getVersion": getVersion,
   "highlight": highlight
 }

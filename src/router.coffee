@@ -11,6 +11,7 @@ Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 {
   matchFiles,
+  getVersion,
   getPathFn,
   getURLFn,
   getContentType,
@@ -111,6 +112,7 @@ class Router
       "siteConfig": @site.get("siteConfig"),
       "themeConfig": @site.get("themeConfig"),
       "moment": moment,
+      "getVersion": getVersion,
       "getURL": @getURL,
       "getPath": @getPath,
       "isCurrentPath": isCurrentPathFn(
