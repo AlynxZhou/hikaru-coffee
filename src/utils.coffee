@@ -49,12 +49,16 @@ parseFrontMatter = (file) ->
 
 getContentType = (docPath) ->
   switch path.extname(docPath)
-    when ".html"
+    when ".htm"
       return "text/html; charset=UTF-8"
     when ".html"
       return "text/html; charset=UTF-8"
+    when ".xml"
+      return "application/xml; charset=UTF-8"
     when ".js"
       return "application/javascript; charset=UTF-8"
+    when ".json"
+      return "application/json; charset=UTF-8"
     when ".css"
       return "text/css; charset=UTF-8"
     when ".txt"

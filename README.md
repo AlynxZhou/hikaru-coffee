@@ -1,4 +1,4 @@
-hikaru
+Hikaru
 ======
 
 A static site generator that generates routes based on directories naturally.
