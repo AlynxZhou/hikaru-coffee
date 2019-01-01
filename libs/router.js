@@ -254,7 +254,6 @@
             var file, k, key, l, len1, ref1, ref2, v;
             this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site.get("themeSrcDir"), srcPath))}\``);
             this.site.set("pages", this.unprocessedSite.get("pages"));
-            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
             file = new File(this.site.get("docDir"), this.site.get("themeSrcDir"), srcPath);
             if (event !== "unlink") {
               file = (await this.loadFile(file));
@@ -278,6 +277,7 @@
                 }
               }
             }
+            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();
@@ -304,7 +304,6 @@
             var file, key, l, len1, ref1;
             this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site.get("srcDir"), srcPath))}\``);
             this.site.set("pages", this.unprocessedSite.get("pages"));
-            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
             file = new File(this.site.get("docDir"), this.site.get("srcDir"), srcPath);
             if (event !== "unlink") {
               file = (await this.loadFile(file));
@@ -322,6 +321,7 @@
                 }
               }
             }
+            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();

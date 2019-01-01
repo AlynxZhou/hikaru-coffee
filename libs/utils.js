@@ -62,33 +62,24 @@
     file["title"] = (ref = file["title"]) != null ? ref.toString() : void 0;
     // Nunjucks does not allow to call moment.tz.guess() in template.
     // So we pass timezone to each file as an attribute.
-    file["timezone"] = file["timezone"] || moment.tz.guess();
+    file["zone"] = file["zone"] || moment.tz.guess();
     if (file["updatedTime"] == null) {
       file["updatedTime"] = fse.statSync(path.join(file["srcDir"], file["srcPath"]))["mtime"];
     } else {
-      file["updatedTime"] = transposeYAMLTime(file["updatedTime"]);
+      file["updatedTime"] = moment.tz(transposeYAMLTime(file["updatedTime"]), file["zone"]).toDate();
     }
+    // Fallback compatibility.
+    file["createdTime"] = file["createdTime"] || file["date"];
     if (file["createdTime"] == null) {
-      if (file["date"] != null) {
-        file["createdTime"] = transposeYAMLTime(file["date"]);
-      } else if (file["time"] != null) {
-        file["createdTime"] = transposeYAMLTime(file["time"]);
-      } else if (file["datetime"] != null) {
-        file["createdTime"] = transposeYAMLTime(file["datetime"]);
-      } else {
-        // Some filesystem does not support birthtime.
-        // file["createdTime"] = fse.statSync(path.join(
-        //   file["srcDir"], file["srcPath"]
-        // ))["birthtime"]
-        file["createdTime"] = file["updatedTime"];
-      }
+      file["createdTime"] = file["updatedTime"];
+      file["createdMoment"] = moment(file["createdTime"]);
     } else {
-      file["createdTime"] = transposeYAMLTime(file["createdTime"]);
+      // Parsing non-timezone string with a user-specific timezone.
+      file["createdMoment"] = moment.tz(transposeYAMLTime(file["createdTime"]), file["zone"]);
+      file["createdTime"] = file["createdMoment"].toDate();
     }
-    // Parsing non-timezone string with a user-specific timezone.
-    file["createdMoment"] = moment.tz(file["createdTime"], file["timezone"]);
-    file["createdTime"] = file["createdMoment"].toDate();
-    file["date"] = file["time"] = file["datetime"] = file["createdTime"];
+    // Fallback compatibility.
+    file["date"] = file["createdTime"];
     return file;
   };
 
