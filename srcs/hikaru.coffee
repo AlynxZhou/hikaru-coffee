@@ -2,7 +2,6 @@ fse = require("fs-extra")
 path = require("path")
 {URL} = require("url")
 cheerio = require("cheerio")
-moment = require("moment")
 colors = require("colors/safe")
 Promise = require("bluebird")
 

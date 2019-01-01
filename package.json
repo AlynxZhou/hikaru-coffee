@@ -2,7 +2,7 @@
   "name": "hikaru-coffee",
   "version": "1.11.2",
   "description": "A static site generator that generates routes based on directories naturally.",
-  "main": "lib/index.js",
+  "main": "libs/index.js",
   "bin": {
     "hikaru": "bin/hikaru"
   },
@@ -38,7 +38,7 @@
     "highlight.js": "^9.12.0",
     "js-yaml": "^3.12.0",
     "marked": "latest",
-    "moment": "^2.22.2",
+    "moment-timezone": "^0.5.23",
     "nib": "^1.1.2",
     "nunjucks": "^3.1.3",
     "stylus": "latest"

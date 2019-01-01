@@ -1,7 +1,9 @@
 fm = require("front-matter")
+fse = require("fs-extra")
 path = require("path")
 glob = require("glob")
 {URL} = require("url")
+moment = require("moment-timezone")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 highlight = require("./highlight")
@@ -27,6 +29,16 @@ matchFiles = (pattern, options) ->
 removeControlChars = (str) ->
   return str.replace(/[\x00-\x1F\x7F]/g, "")
 
+# YAML ignores your local timezone and parse time as UTC.
+# This function will transpose it to a time without timezone.
+# Which looks the same as the original string.
+# If you keep timezone, you cannot easily parse it as another timezone.
+# https://github.com/nodeca/js-yaml/issues/91
+transposeYAMLTime = (datetime) ->
+  return moment(
+    new Date(datetime.getTime() + datetime.getTimezoneOffset() * 60000)
+  ).format("YYYY-MM-DD HH:mm:ss")
+
 parseFrontMatter = (file) ->
   if typeof(file["raw"]) isnt "string"
     return file
@@ -34,17 +46,35 @@ parseFrontMatter = (file) ->
   file["text"] = parsed["body"]
   file["frontMatter"] = parsed["attributes"]
   file = Object.assign(file, parsed["attributes"])
-  if file["date"]?
-    # Fix js-yaml"s bug that ignore timezone while parsing.
-    # https://github.com/nodeca/js-yaml/issues/91
-    file["date"] = new Date(
-      file["date"].getTime() +
-      file["date"].getTimezoneOffset() * 60000
-    )
+  file["title"] = file["title"]?.toString()
+  # Nunjucks does not allow to call moment.tz.guess() in template.
+  # So we pass timezone to each file as an attribute.
+  file["timezone"] = file["timezone"] or moment.tz.guess()
+  if not file["updatedTime"]?
+    file["updatedTime"] = fse.statSync(path.join(
+      file["srcDir"], file["srcPath"]
+    ))["mtime"]
   else
-    file["date"] = new Date()
-  if file["title"]?
-    file["title"] = file["title"].toString()
+    file["updatedTime"] = transposeYAMLTime(file["updatedTime"])
+  if not file["createdTime"]?
+    if file["date"]?
+      file["createdTime"] = transposeYAMLTime(file["date"])
+    else if file["time"]?
+      file["createdTime"] = transposeYAMLTime(file["time"])
+    else if file["datetime"]?
+      file["createdTime"] = transposeYAMLTime(file["datetime"])
+    else
+      # Some filesystem does not support birthtime.
+      # file["createdTime"] = fse.statSync(path.join(
+      #   file["srcDir"], file["srcPath"]
+      # ))["birthtime"]
+      file["createdTime"] = file["updatedTime"]
+  else
+    file["createdTime"] = transposeYAMLTime(file["createdTime"])
+  # Parsing non-timezone string with a user-specific timezone.
+  file["createdMoment"] = moment.tz(file["createdTime"], file["timezone"])
+  file["createdTime"] = file["createdMoment"].toDate()
+  file["date"] = file["time"] = file["datetime"] = file["createdTime"]
   return file
 
 getContentType = (docPath) ->

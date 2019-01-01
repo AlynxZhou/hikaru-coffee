@@ -14,7 +14,7 @@
 
   colors = require("colors/safe");
 
-  moment = require("moment");
+  moment = require("moment-timezone");
 
   chokidar = require("chokidar");
 
