@@ -56,6 +56,7 @@
       this.unprocessedSite = new Site(this.site["workDir"]);
       this.getURL = getURLFn(this.site.get("siteConfig")["baseURL"], this.site.get("siteConfig")["rootDir"]);
       this.getPath = getPathFn(this.site.get("siteConfig")["rootDir"]);
+      moment.locale(this.site.get("siteConfig")["language"]);
     }
 
     async readFile(file) {

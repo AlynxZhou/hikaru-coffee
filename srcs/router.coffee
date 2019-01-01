@@ -35,6 +35,7 @@ class Router
       @site.get("siteConfig")["baseURL"], @site.get("siteConfig")["rootDir"]
     )
     @getPath = getPathFn(@site.get("siteConfig")["rootDir"])
+    moment.locale(@site.get("siteConfig")["language"])
 
   readFile: (file) ->
     raw = await fse.readFile(path.join(file["srcDir"], file["srcPath"]))

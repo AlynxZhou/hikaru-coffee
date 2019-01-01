@@ -35,6 +35,9 @@ removeControlChars = (str) ->
 # If you keep timezone, you cannot easily parse it as another timezone.
 # https://github.com/nodeca/js-yaml/issues/91
 transposeYAMLTime = (datetime) ->
+  # If you don't write full YYYY-MM-DD HH:mm:ss, js-yaml will leave a string.
+  if typeof(datetime) is "string"
+    return moment(datetime).format("YYYY-MM-DD HH:mm:ss")
   return moment(
     new Date(datetime.getTime() + datetime.getTimezoneOffset() * 60000)
   ).format("YYYY-MM-DD HH:mm:ss")
@@ -69,6 +72,8 @@ parseFrontMatter = (file) ->
       transposeYAMLTime(file["createdTime"]), file["zone"]
     )
     file["createdTime"] = file["createdMoment"].toDate()
+  if file["language"]?
+    file["createdMoment"].locale(file["language"])
   # Fallback compatibility.
   file["date"] = file["createdTime"]
   return file
