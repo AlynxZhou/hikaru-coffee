@@ -49,32 +49,28 @@ parseFrontMatter = (file) ->
   file["title"] = file["title"]?.toString()
   # Nunjucks does not allow to call moment.tz.guess() in template.
   # So we pass timezone to each file as an attribute.
-  file["timezone"] = file["timezone"] or moment.tz.guess()
+  file["zone"] = file["zone"] or moment.tz.guess()
   if not file["updatedTime"]?
     file["updatedTime"] = fse.statSync(path.join(
       file["srcDir"], file["srcPath"]
     ))["mtime"]
   else
-    file["updatedTime"] = transposeYAMLTime(file["updatedTime"])
+    file["updatedTime"] = moment.tz(
+      transposeYAMLTime(file["updatedTime"]), file["zone"]
+    ).toDate()
+  # Fallback compatibility.
+  file["createdTime"] = file["createdTime"] or file["date"]
   if not file["createdTime"]?
-    if file["date"]?
-      file["createdTime"] = transposeYAMLTime(file["date"])
-    else if file["time"]?
-      file["createdTime"] = transposeYAMLTime(file["time"])
-    else if file["datetime"]?
-      file["createdTime"] = transposeYAMLTime(file["datetime"])
-    else
-      # Some filesystem does not support birthtime.
-      # file["createdTime"] = fse.statSync(path.join(
-      #   file["srcDir"], file["srcPath"]
-      # ))["birthtime"]
-      file["createdTime"] = file["updatedTime"]
+    file["createdTime"] = file["updatedTime"]
+    file["createdMoment"] = moment(file["createdTime"])
   else
-    file["createdTime"] = transposeYAMLTime(file["createdTime"])
-  # Parsing non-timezone string with a user-specific timezone.
-  file["createdMoment"] = moment.tz(file["createdTime"], file["timezone"])
-  file["createdTime"] = file["createdMoment"].toDate()
-  file["date"] = file["time"] = file["datetime"] = file["createdTime"]
+    # Parsing non-timezone string with a user-specific timezone.
+    file["createdMoment"] = moment.tz(
+      transposeYAMLTime(file["createdTime"]), file["zone"]
+    )
+    file["createdTime"] = file["createdMoment"].toDate()
+  # Fallback compatibility.
+  file["date"] = file["createdTime"]
   return file
 
 getContentType = (docPath) ->

@@ -194,7 +194,6 @@ class Router
           }`"
         )
         @site.set("pages", @unprocessedSite.get("pages"))
-        @unprocessedSite.set("pages", @site.get("pages")[0...])
         file = new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
         if event isnt "unlink"
           file = await @loadFile(file)
@@ -211,6 +210,7 @@ class Router
           for key in ["assets", "templates"]
             if @site.del(key, file)?
               break
+        @unprocessedSite.set("pages", @site.get("pages")[0...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
@@ -231,7 +231,6 @@ class Router
           }`"
         )
         @site.set("pages", @unprocessedSite.get("pages"))
-        @unprocessedSite.set("pages", @site.get("pages")[0...])
         file = new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
         if event isnt "unlink"
           file = await @loadFile(file)
@@ -245,6 +244,7 @@ class Router
           for key in ["assets", "pages", "posts"]
             if @site.del(key, file)?
               break
+        @unprocessedSite.set("pages", @site.get("pages")[0...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
