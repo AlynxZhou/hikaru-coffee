@@ -8,6 +8,7 @@ Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 highlight = require("./highlight")
 packageJSON = require("../package.json")
+extMIME = require("../dist/ext-mime.json")
 
 escapeHTML = (str) ->
   return str
@@ -79,25 +80,7 @@ parseFrontMatter = (file) ->
   return file
 
 getContentType = (docPath) ->
-  switch path.extname(docPath)
-    when ".htm"
-      return "text/html; charset=UTF-8"
-    when ".html"
-      return "text/html; charset=UTF-8"
-    when ".xml"
-      return "application/xml; charset=UTF-8"
-    when ".js"
-      return "application/javascript; charset=UTF-8"
-    when ".json"
-      return "application/json; charset=UTF-8"
-    when ".css"
-      return "text/css; charset=UTF-8"
-    when ".txt"
-      return "text/plain; charset=UTF-8"
-    when ".manifest"
-      return "text/cache-manifest; charset=UTF-8"
-    else
-      return "application/octet-stream"
+  return extMIME[path.extname(docPath)] or "application/octet-stream"
 
 paginate = (p, posts, perPage, ctx) ->
   if not perPage
