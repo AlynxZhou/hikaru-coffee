@@ -2,6 +2,14 @@ class Site
   constructor: (workDir) ->
     @_ = {
       "workDir": workDir,
+      # You should not use these variables.
+      "srcDir": "",
+      "docDir": "",
+      "themeDir": "",
+      "themeSrcDir": "",
+      "categoryDir": "",
+      "tagDir": "",
+      # end
       "siteConfig": {},
       "themeConfig": {},
       "templates": {},
@@ -11,12 +19,20 @@ class Site
       "posts": [],
       "files": [],
       "categories": [],
-      # Flattend categories length.
+      # Flattened categories length.
       "categoriesLength": 0,
       "tags": [],
-      # Flattend tags length.
+      # Flattened tags length.
       "tagsLength": 0
     }
+    @wrap()
+
+  wrap: () =>
+    for key of @_ then do (key) =>
+      Object.defineProperty(this, key, {
+        "get": () => return @get(key),
+        "set": (value) => @set(key, value)
+      })
 
   get: (key) =>
     if typeof(key) isnt "string" or key not of @_

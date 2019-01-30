@@ -119,7 +119,7 @@ sortCategories = (category) ->
 
 paginateCategories = (category, parentPath, perPage, site) ->
   results = []
-  sp = Object.assign(new File(site.get("docDir")), {
+  sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
     "layout": "category",
     "docPath": path.join(parentPath, "#{category["name"]}", "index.html"),
     "title": "category",

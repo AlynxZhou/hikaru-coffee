@@ -190,47 +190,55 @@ class Hikaru
 
   loadSite: (workDir, configPath) =>
     @site = new Site(workDir)
-    configPath = configPath or path.join(@site.get("workDir"), "config.yml")
+    configPath = configPath or path.join(@site["workDir"], "config.yml")
     try
-      @site.set(
-        "siteConfig", yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
-      )
+      @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     catch err
       @logger.warn("Hikaru cannot find site config!")
       @logger.error(err)
       process.exit(-1)
-    @site.set("srcDir", path.join(
-      @site.get("workDir"), @site.get("siteConfig")["srcDir"] or "srcs"
-    ))
-    @site.set("docDir", path.join(
-      @site.get("workDir"), @site.get("siteConfig")["docDir"] or "docs"
-    ))
-    @site.set("themeDir", path.join(
-      @site.get("workDir"), "themes", @site.get("siteConfig")["themeDir"]
-    ))
-    @site.set("themeSrcDir", path.join(@site.get("themeDir"), "srcs"))
+    @site["siteConfig"]["srcDir"] = path.join(
+      @site["workDir"], @site["siteConfig"]["srcDir"] or "srcs"
+    )
+    @site["siteConfig"]["docDir"] = path.join(
+      @site["workDir"], @site["siteConfig"]["docDir"] or "docs"
+    )
+    @site["siteConfig"]["themeDir"] = path.join(
+      @site["workDir"], "themes", @site["siteConfig"]["themeDir"]
+    )
+    @site["siteConfig"]["themeSrcDir"] = path.join(
+      @site["siteConfig"]["themeDir"], "srcs"
+    )
+    @site["siteConfig"]["categoryDir"] = @site["siteConfig"]["categoryDir"] or
+    "categories"
+    @site["siteConfig"]["tagDir"] = @site["siteConfig"]["tagDir"] or "tags"
     try
-      @site.set("themeConfig", yaml.safeLoad(
-        fse.readFileSync(path.join(@site.get("themeDir"), "config.yml"))
-      ))
+      @site["themeConfig"] = yaml.safeLoad(
+        fse.readFileSync(
+          path.join(@site["siteConfig"]["themeDir"], "config.yml")
+        )
+      )
     catch err
       if err["code"] is "ENOENT"
         @logger.warn("Hikaru continues with a empty theme config...")
-        @site.set("themeConfig", [])
-    @site.set(
-      "categoryDir", @site.get("siteConfig")["categoryDir"] or "categories"
-    )
-    @site.set("tagDir", @site.get("siteConfig")["tagDir"] or "tags")
+        @site["themeConfig"] = {}
+    # For old plugins and will be removed.
+    @site["srcDir"] = @site["siteConfig"]["srcDir"]
+    @site["docDir"] = @site["siteConfig"]["docDir"]
+    @site["themeDir"] = @site["siteConfig"]["themeDir"]
+    @site["themeSrcDir"] = @site["siteConfig"]["themeSrcDir"]
+    @site["categoryDir"] = @site["siteConfig"]["categoryDir"]
+    @site["tagDir"] = @site["siteConfig"]["tagDir"]
 
   loadModules: () =>
-    @renderer = new Renderer(@logger, @site.get("siteConfig")["skipRender"])
+    @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
     @processer = new Processer(@logger)
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
     try
       defaultLanguage = yaml.safeLoad(
         fse.readFileSync(
-          path.join(@site.get("themeDir"), "languages", "default.yml")
+          path.join(@site["siteConfig"]["themeDir"], "languages", "default.yml")
         )
       )
       @translator.register("default", defaultLanguage)
@@ -251,7 +259,7 @@ class Hikaru
 
   # Load local plugins for site.
   loadPlugins: () =>
-    siteJsonPath = path.join(@site.get("workDir"), "package.json")
+    siteJsonPath = path.join(@site["workDir"], "package.json")
     if not fse.existsSync(siteJsonPath)
       return
     modules = JSON.parse(await fse.readFile(siteJsonPath))["dependencies"]
@@ -262,7 +270,7 @@ class Hikaru
     ).map((name) =>
       @logger.debug("Hikaru is loading plugin `#{colors.cyan(name)}`...")
       return require(require.resolve(name, {"paths": [
-        @site.get("workDir"),
+        @site["workDir"],
         ".",
         __dirname
       ]}))(this)
@@ -272,21 +280,21 @@ class Hikaru
   loadScripts: () =>
     scripts = (await matchFiles(path.join("**", "*.js"), {
       "nodir": true,
-      "cwd": path.join(@site.get("workDir"), "scripts")
+      "cwd": path.join(@site["workDir"], "scripts")
     })).map((filename) =>
-      return path.join(@site.get("workDir"), "scripts", filename)
+      return path.join(@site["workDir"], "scripts", filename)
     ).concat((await matchFiles(path.join("**", "*.js"), {
       "nodir": true,
-      "cwd": path.join(@site.get("themeDir"), "scripts")
+      "cwd": path.join(@site["siteConfig"]["themeDir"], "scripts")
     })).map((filename) =>
-      return path.join(@site.get("themeDir"), "scripts", filename)
+      return path.join(@site["siteConfig"]["themeDir"], "scripts", filename)
     ))
     return scripts.map((name) =>
       @logger.debug("Hikaru is loading script `#{
         colors.cyan(path.basename(name))
       }`...")
       return require(require.resolve(name, {"paths": [
-        @site.get("workDir"),
+        @site["workDir"],
         ".",
         __dirname
       ]}))(this)
@@ -294,9 +302,9 @@ class Hikaru
 
   registerInternalRenderers: () =>
     njkConfig = Object.assign(
-      {"autoescape": false}, @site.get("siteConfig")["nunjucks"]
+      {"autoescape": false}, @site["siteConfig"]["nunjucks"]
     )
-    njkEnv = nunjucks.configure(@site.get("themeSrcDir"), njkConfig)
+    njkEnv = nunjucks.configure(@site["siteConfig"]["themeSrcDir"], njkConfig)
     @renderer.register([".njk", ".j2"], null, (file, ctx) ->
       template = nunjucks.compile(file["text"], njkEnv, file["srcPath"])
       # For template you must give a async render function as content.
@@ -324,15 +332,15 @@ class Hikaru
           "lang": lang?.toLowerCase(),
           "hljs": true,
           "gutter": true
-        }, @site.get("siteConfig")["highlight"]))
-    }, @site.get("siteConfig")["marked"])
+        }, @site["siteConfig"]["highlight"]))
+    }, @site["siteConfig"]["marked"])
     marked.setOptions(markedConfig)
     @renderer.register(".md", ".html", (file, ctx) ->
       file["content"] = marked(file["text"])
       return file
     )
 
-    stylConfig = @site.get("siteConfig")["stylus"] or {}
+    stylConfig = @site["siteConfig"]["stylus"] or {}
     @renderer.register(".styl", ".css", (file, ctx) =>
       return new Promise((resolve, reject) =>
         stylus(file["text"])
@@ -340,7 +348,7 @@ class Hikaru
         .use((style) =>
           style.define("getSiteConfig", (file) =>
             keys = file["val"].toString().split(".")
-            res = @site.get("siteConfig")
+            res = @site["siteConfig"]
             for k in keys
               if k not of res
                 return null
@@ -350,15 +358,16 @@ class Hikaru
         ).use((style) =>
           style.define("getThemeConfig", (file) =>
             keys = file["val"].toString().split(".")
-            res = @site.get("themeConfig")
+            res = @site["themeConfig"]
             for k in keys
               if k not of res
                 return null
               res = res[k]
             return res
           )
-        ).set("filename", path.join(@site.get("themeSrcDir"), file["srcPath"]))
-        .set("sourcemap", stylConfig["sourcemap"])
+        ).set("filename", path.join(
+          @site["siteConfig"]["themeSrcDir"], file["srcPath"]
+        )).set("sourcemap", stylConfig["sourcemap"])
         .set("compress", stylConfig["compress"])
         .set("include css", true)
         .render((err, res) ->
@@ -376,7 +385,7 @@ class Hikaru
         return -(a["date"] - b["date"])
       )
       return paginate(
-        p, posts, @site.get("siteConfig")["perPage"], ctx
+        p, posts, @site["siteConfig"]["perPage"], ctx
       )
     )
 
@@ -385,19 +394,19 @@ class Hikaru
         return -(a["date"] - b["date"])
       )
       return paginate(
-        p, posts, @site.get("siteConfig")["perPage"], ctx
+        p, posts, @site["siteConfig"]["perPage"], ctx
       )
     )
 
     @processer.register("categories", (p, posts, ctx) =>
       return Object.assign(new File(), p, ctx, {
-        "categories": @site.get("categories")
+        "categories": @site["categories"]
       })
     )
 
     @processer.register("tags", (p, posts, ctx) =>
       return Object.assign(new File(), p, ctx, {
-        "tags": @site.get("tags")
+        "tags": @site["tags"]
       })
     )
 
@@ -407,11 +416,11 @@ class Hikaru
       toc = genToc($)
       resolveLink(
         $,
-        @site.get("siteConfig")["baseURL"],
-        @site.get("siteConfig")["rootDir"],
+        @site["siteConfig"]["baseURL"],
+        @site["siteConfig"]["rootDir"],
         p["docPath"]
       )
-      resolveImage($, @site.get("siteConfig")["rootDir"], p["docPath"])
+      resolveImage($, @site["siteConfig"]["rootDir"], p["docPath"])
       p["content"] = $("body").html()
       if p["content"].indexOf("<!--more-->") isnt -1
         split = p["content"].split("<!--more-->")
@@ -428,7 +437,7 @@ class Hikaru
       # Generate categories
       categories = []
       categoriesLength = 0
-      for post in site.get("posts")
+      for post in site["posts"]
         if not post["frontMatter"]["categories"]?
           continue
         postCategories = []
@@ -456,13 +465,13 @@ class Hikaru
         sortCategories(sub)
         for p in paginateCategories(
           sub,
-          site.get("categoryDir"),
-          site.get("siteConfig")["perPage"],
+          site["siteConfig"]["categoryDir"],
+          site["siteConfig"]["perPage"],
           site
         )
           site.put("pages", p)
-      site.set("categories", categories)
-      site.set("categoriesLength", categoriesLength)
+      site["categories"] = categories
+      site["categoriesLength"] = categoriesLength
       return site
     )
 
@@ -470,7 +479,7 @@ class Hikaru
       # Generate tags.
       tags = []
       tagsLength = 0
-      for post in site.get("posts")
+      for post in site["posts"]
         if not post["frontMatter"]["tags"]?
           continue
         postTags = []
@@ -495,21 +504,21 @@ class Hikaru
         tag["posts"].sort((a, b) ->
           return -(a["date"] - b["date"])
         )
-        sp = Object.assign(new File(site.get("docDir")), {
+        sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
           "layout": "tag",
           "docPath": path.join(
-            site.get("tagDir"), "#{tag["name"]}", "index.html"
+            site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
           ),
           "title": "tag",
           "name": tag["name"].toString()
         })
         tag["docPath"] = sp["docPath"]
         for p in paginate(
-          sp, tag["posts"], site.get("siteConfig")["perPage"]
+          sp, tag["posts"], site["siteConfig"]["perPage"]
         )
           site.put("pages", p)
-      site.set("tags", tags)
-      site.set("tagsLength", tagsLength)
+      site["tags"] = tags
+      site["tagsLength"] = tagsLength
       return site
     )
 

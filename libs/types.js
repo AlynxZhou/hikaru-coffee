@@ -4,6 +4,7 @@
 
   Site = class Site {
     constructor(workDir) {
+      this.wrap = this.wrap.bind(this);
       this.get = this.get.bind(this);
       this.set = this.set.bind(this);
       // Put a file into an array.
@@ -14,6 +15,14 @@
       this.raw = this.raw.bind(this);
       this._ = {
         "workDir": workDir,
+        // You should not use these variables.
+        "srcDir": "",
+        "docDir": "",
+        "themeDir": "",
+        "themeSrcDir": "",
+        "categoryDir": "",
+        "tagDir": "",
+        // end
         "siteConfig": {},
         "themeConfig": {},
         "templates": {},
@@ -23,12 +32,31 @@
         "posts": [],
         "files": [],
         "categories": [],
-        // Flattend categories length.
+        // Flattened categories length.
         "categoriesLength": 0,
         "tags": [],
-        // Flattend tags length.
+        // Flattened tags length.
         "tagsLength": 0
       };
+      this.wrap();
+    }
+
+    wrap() {
+      var key, results;
+      results = [];
+      for (key in this._) {
+        results.push(((key) => {
+          return Object.defineProperty(this, key, {
+            "get": () => {
+              return this.get(key);
+            },
+            "set": (value) => {
+              return this.set(key, value);
+            }
+          });
+        })(key));
+      }
+      return results;
     }
 
     get(key) {

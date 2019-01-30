@@ -184,40 +184,47 @@
     loadSite(workDir, configPath) {
       var err;
       this.site = new Site(workDir);
-      configPath = configPath || path.join(this.site.get("workDir"), "config.yml");
+      configPath = configPath || path.join(this.site["workDir"], "config.yml");
       try {
-        this.site.set("siteConfig", yaml.safeLoad(fse.readFileSync(configPath, "utf8")));
+        this.site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"));
       } catch (error) {
         err = error;
         this.logger.warn("Hikaru cannot find site config!");
         this.logger.error(err);
         process.exit(-1);
       }
-      this.site.set("srcDir", path.join(this.site.get("workDir"), this.site.get("siteConfig")["srcDir"] || "srcs"));
-      this.site.set("docDir", path.join(this.site.get("workDir"), this.site.get("siteConfig")["docDir"] || "docs"));
-      this.site.set("themeDir", path.join(this.site.get("workDir"), "themes", this.site.get("siteConfig")["themeDir"]));
-      this.site.set("themeSrcDir", path.join(this.site.get("themeDir"), "srcs"));
+      this.site["siteConfig"]["srcDir"] = path.join(this.site["workDir"], this.site["siteConfig"]["srcDir"] || "srcs");
+      this.site["siteConfig"]["docDir"] = path.join(this.site["workDir"], this.site["siteConfig"]["docDir"] || "docs");
+      this.site["siteConfig"]["themeDir"] = path.join(this.site["workDir"], "themes", this.site["siteConfig"]["themeDir"]);
+      this.site["siteConfig"]["themeSrcDir"] = path.join(this.site["siteConfig"]["themeDir"], "srcs");
+      this.site["siteConfig"]["categoryDir"] = this.site["siteConfig"]["categoryDir"] || "categories";
+      this.site["siteConfig"]["tagDir"] = this.site["siteConfig"]["tagDir"] || "tags";
       try {
-        this.site.set("themeConfig", yaml.safeLoad(fse.readFileSync(path.join(this.site.get("themeDir"), "config.yml"))));
+        this.site["themeConfig"] = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "config.yml")));
       } catch (error) {
         err = error;
         if (err["code"] === "ENOENT") {
           this.logger.warn("Hikaru continues with a empty theme config...");
-          this.site.set("themeConfig", []);
+          this.site["themeConfig"] = {};
         }
       }
-      this.site.set("categoryDir", this.site.get("siteConfig")["categoryDir"] || "categories");
-      return this.site.set("tagDir", this.site.get("siteConfig")["tagDir"] || "tags");
+      // For old plugins and will be removed.
+      this.site["srcDir"] = this.site["siteConfig"]["srcDir"];
+      this.site["docDir"] = this.site["siteConfig"]["docDir"];
+      this.site["themeDir"] = this.site["siteConfig"]["themeDir"];
+      this.site["themeSrcDir"] = this.site["siteConfig"]["themeSrcDir"];
+      this.site["categoryDir"] = this.site["siteConfig"]["categoryDir"];
+      return this.site["tagDir"] = this.site["siteConfig"]["tagDir"];
     }
 
     loadModules() {
       var defaultLanguage, err;
-      this.renderer = new Renderer(this.logger, this.site.get("siteConfig")["skipRender"]);
+      this.renderer = new Renderer(this.logger, this.site["siteConfig"]["skipRender"]);
       this.processer = new Processer(this.logger);
       this.generator = new Generator(this.logger);
       this.translator = new Translator(this.logger);
       try {
-        defaultLanguage = yaml.safeLoad(fse.readFileSync(path.join(this.site.get("themeDir"), "languages", "default.yml")));
+        defaultLanguage = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "languages", "default.yml")));
         this.translator.register("default", defaultLanguage);
       } catch (error) {
         err = error;
@@ -240,7 +247,7 @@
 
     async loadPlugins() {
       var modules, siteJsonPath;
-      siteJsonPath = path.join(this.site.get("workDir"), "package.json");
+      siteJsonPath = path.join(this.site["workDir"], "package.json");
       if (!fse.existsSync(siteJsonPath)) {
         return;
       }
@@ -253,7 +260,7 @@
       }).map((name) => {
         this.logger.debug(`Hikaru is loading plugin \`${colors.cyan(name)}\`...`);
         return require(require.resolve(name, {
-          "paths": [this.site.get("workDir"), ".", __dirname]
+          "paths": [this.site["workDir"], ".", __dirname]
         }))(this);
       });
     }
@@ -262,19 +269,19 @@
       var scripts;
       scripts = ((await matchFiles(path.join("**", "*.js"), {
         "nodir": true,
-        "cwd": path.join(this.site.get("workDir"), "scripts")
+        "cwd": path.join(this.site["workDir"], "scripts")
       }))).map((filename) => {
-        return path.join(this.site.get("workDir"), "scripts", filename);
+        return path.join(this.site["workDir"], "scripts", filename);
       }).concat(((await matchFiles(path.join("**", "*.js"), {
         "nodir": true,
-        "cwd": path.join(this.site.get("themeDir"), "scripts")
+        "cwd": path.join(this.site["siteConfig"]["themeDir"], "scripts")
       }))).map((filename) => {
-        return path.join(this.site.get("themeDir"), "scripts", filename);
+        return path.join(this.site["siteConfig"]["themeDir"], "scripts", filename);
       }));
       return scripts.map((name) => {
         this.logger.debug(`Hikaru is loading script \`${colors.cyan(path.basename(name))}\`...`);
         return require(require.resolve(name, {
-          "paths": [this.site.get("workDir"), ".", __dirname]
+          "paths": [this.site["workDir"], ".", __dirname]
         }))(this);
       });
     }
@@ -283,8 +290,8 @@
       var markedConfig, njkConfig, njkEnv, stylConfig;
       njkConfig = Object.assign({
         "autoescape": false
-      }, this.site.get("siteConfig")["nunjucks"]);
-      njkEnv = nunjucks.configure(this.site.get("themeSrcDir"), njkConfig);
+      }, this.site["siteConfig"]["nunjucks"]);
+      njkEnv = nunjucks.configure(this.site["siteConfig"]["themeSrcDir"], njkConfig);
       this.renderer.register([".njk", ".j2"], null, function(file, ctx) {
         var template;
         template = nunjucks.compile(file["text"], njkEnv, file["srcPath"]);
@@ -313,22 +320,22 @@
             "lang": lang != null ? lang.toLowerCase() : void 0,
             "hljs": true,
             "gutter": true
-          }, this.site.get("siteConfig")["highlight"]));
+          }, this.site["siteConfig"]["highlight"]));
         }
-      }, this.site.get("siteConfig")["marked"]);
+      }, this.site["siteConfig"]["marked"]);
       marked.setOptions(markedConfig);
       this.renderer.register(".md", ".html", function(file, ctx) {
         file["content"] = marked(file["text"]);
         return file;
       });
-      stylConfig = this.site.get("siteConfig")["stylus"] || {};
+      stylConfig = this.site["siteConfig"]["stylus"] || {};
       return this.renderer.register(".styl", ".css", (file, ctx) => {
         return new Promise((resolve, reject) => {
           return stylus(file["text"]).use(nib()).use((style) => {
             return style.define("getSiteConfig", (file) => {
               var i, k, keys, len, res;
               keys = file["val"].toString().split(".");
-              res = this.site.get("siteConfig");
+              res = this.site["siteConfig"];
               for (i = 0, len = keys.length; i < len; i++) {
                 k = keys[i];
                 if (!(k in res)) {
@@ -342,7 +349,7 @@
             return style.define("getThemeConfig", (file) => {
               var i, k, keys, len, res;
               keys = file["val"].toString().split(".");
-              res = this.site.get("themeConfig");
+              res = this.site["themeConfig"];
               for (i = 0, len = keys.length; i < len; i++) {
                 k = keys[i];
                 if (!(k in res)) {
@@ -352,7 +359,7 @@
               }
               return res;
             });
-          }).set("filename", path.join(this.site.get("themeSrcDir"), file["srcPath"])).set("sourcemap", stylConfig["sourcemap"]).set("compress", stylConfig["compress"]).set("include css", true).render(function(err, res) {
+          }).set("filename", path.join(this.site["siteConfig"]["themeSrcDir"], file["srcPath"])).set("sourcemap", stylConfig["sourcemap"]).set("compress", stylConfig["compress"]).set("include css", true).render(function(err, res) {
             if (err != null) {
               return reject(err);
             }
@@ -368,22 +375,22 @@
         posts.sort(function(a, b) {
           return -(a["date"] - b["date"]);
         });
-        return paginate(p, posts, this.site.get("siteConfig")["perPage"], ctx);
+        return paginate(p, posts, this.site["siteConfig"]["perPage"], ctx);
       });
       this.processer.register("archives", (p, posts, ctx) => {
         posts.sort(function(a, b) {
           return -(a["date"] - b["date"]);
         });
-        return paginate(p, posts, this.site.get("siteConfig")["perPage"], ctx);
+        return paginate(p, posts, this.site["siteConfig"]["perPage"], ctx);
       });
       this.processer.register("categories", (p, posts, ctx) => {
         return Object.assign(new File(), p, ctx, {
-          "categories": this.site.get("categories")
+          "categories": this.site["categories"]
         });
       });
       this.processer.register("tags", (p, posts, ctx) => {
         return Object.assign(new File(), p, ctx, {
-          "tags": this.site.get("tags")
+          "tags": this.site["tags"]
         });
       });
       return this.processer.register(["post", "page"], (p, posts, ctx) => {
@@ -391,8 +398,8 @@
         $ = cheerio.load(p["content"]);
         resolveHeaderIds($);
         toc = genToc($);
-        resolveLink($, this.site.get("siteConfig")["baseURL"], this.site.get("siteConfig")["rootDir"], p["docPath"]);
-        resolveImage($, this.site.get("siteConfig")["rootDir"], p["docPath"]);
+        resolveLink($, this.site["siteConfig"]["baseURL"], this.site["siteConfig"]["rootDir"], p["docPath"]);
+        resolveImage($, this.site["siteConfig"]["rootDir"], p["docPath"]);
         p["content"] = $("body").html();
         if (p["content"].indexOf("<!--more-->") !== -1) {
           split = p["content"].split("<!--more-->");
@@ -413,7 +420,7 @@
         // Generate categories
         categories = [];
         categoriesLength = 0;
-        ref = site.get("posts");
+        ref = site["posts"];
         for (i = 0, len = ref.length; i < len; i++) {
           post = ref[i];
           if (post["frontMatter"]["categories"] == null) {
@@ -451,14 +458,14 @@
         for (m = 0, len3 = categories.length; m < len3; m++) {
           sub = categories[m];
           sortCategories(sub);
-          ref2 = paginateCategories(sub, site.get("categoryDir"), site.get("siteConfig")["perPage"], site);
+          ref2 = paginateCategories(sub, site["siteConfig"]["categoryDir"], site["siteConfig"]["perPage"], site);
           for (n = 0, len4 = ref2.length; n < len4; n++) {
             p = ref2[n];
             site.put("pages", p);
           }
         }
-        site.set("categories", categories);
-        site.set("categoriesLength", categoriesLength);
+        site["categories"] = categories;
+        site["categoriesLength"] = categoriesLength;
         return site;
       });
       return this.generator.register("beforeProcessing", function(site) {
@@ -466,7 +473,7 @@
         // Generate tags.
         tags = [];
         tagsLength = 0;
-        ref = site.get("posts");
+        ref = site["posts"];
         for (i = 0, len = ref.length; i < len; i++) {
           post = ref[i];
           if (post["frontMatter"]["tags"] == null) {
@@ -503,21 +510,21 @@
           tag["posts"].sort(function(a, b) {
             return -(a["date"] - b["date"]);
           });
-          sp = Object.assign(new File(site.get("docDir")), {
+          sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
             "layout": "tag",
-            "docPath": path.join(site.get("tagDir"), `${tag["name"]}`, "index.html"),
+            "docPath": path.join(site["siteConfig"]["tagDir"], `${tag["name"]}`, "index.html"),
             "title": "tag",
             "name": tag["name"].toString()
           });
           tag["docPath"] = sp["docPath"];
-          ref2 = paginate(sp, tag["posts"], site.get("siteConfig")["perPage"]);
+          ref2 = paginate(sp, tag["posts"], site["siteConfig"]["perPage"]);
           for (n = 0, len4 = ref2.length; n < len4; n++) {
             p = ref2[n];
             site.put("pages", p);
           }
         }
-        site.set("tags", tags);
-        site.set("tagsLength", tagsLength);
+        site["tags"] = tags;
+        site["tagsLength"] = tagsLength;
         return site;
       });
     }

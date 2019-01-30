@@ -54,9 +54,9 @@
       this.srcWatcher = null;
       this.themeWatcher = null;
       this.unprocessedSite = new Site(this.site["workDir"]);
-      this.getURL = getURLFn(this.site.get("siteConfig")["baseURL"], this.site.get("siteConfig")["rootDir"]);
-      this.getPath = getPathFn(this.site.get("siteConfig")["rootDir"]);
-      moment.locale(this.site.get("siteConfig")["language"]);
+      this.getURL = getURLFn(this.site["siteConfig"]["baseURL"], this.site["siteConfig"]["rootDir"]);
+      this.getPath = getPathFn(this.site["siteConfig"]["rootDir"]);
+      moment.locale(this.site["siteConfig"]["language"]);
     }
 
     async readFile(file) {
@@ -81,16 +81,16 @@
     async loadFile(file) {
       this.logger.debug(`Hikaru is reading \`${colors.cyan(path.join(file["srcDir"], file["srcPath"]))}\`...`);
       file = (await this.readFile(file));
-      if (file["srcDir"] === this.site.get("themeSrcDir")) {
+      if (file["srcDir"] === this.site["siteConfig"]["themeSrcDir"]) {
         file = (await this.renderer.render(file));
         if (path.dirname(file["srcPath"]) !== ".") {
           file["type"] = "asset";
           this.site.put("assets", file);
         } else {
           file["type"] = "template";
-          this.site.get("templates")[path.basename(file["srcPath"], path.extname(file["srcPath"]))] = file;
+          this.site["templates"][path.basename(file["srcPath"], path.extname(file["srcPath"]))] = file;
         }
-      } else if (file["srcDir"] === this.site.get("srcDir")) {
+      } else if (file["srcDir"] === this.site["siteConfig"]["srcDir"]) {
         file = parseFrontMatter(file);
         file = (await this.renderer.render(file));
         if (file["text"] !== file["raw"]) {
@@ -117,10 +117,10 @@
 
     async processFile(f) {
       var err, fs, lang, language;
-      lang = f["language"] || this.site.get("siteConfig")["language"];
+      lang = f["language"] || this.site["siteConfig"]["language"];
       if (!(lang in this.translator.list())) {
         try {
-          language = yaml.safeLoad(fse.readFileSync(path.join(this.site.get("themeDir"), "languages", `${lang}.yml`)));
+          language = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "languages", `${lang}.yml`)));
           this.translator.register(lang, language);
         } catch (error) {
           err = error;
@@ -129,15 +129,15 @@
           }
         }
       }
-      fs = (await this.processer.process(f, this.site.get("posts"), {
+      fs = (await this.processer.process(f, this.site["posts"], {
         "site": this.site.raw(),
-        "siteConfig": this.site.get("siteConfig"),
-        "themeConfig": this.site.get("themeConfig"),
+        "siteConfig": this.site["siteConfig"],
+        "themeConfig": this.site["themeConfig"],
         "moment": moment,
         "getVersion": getVersion,
         "getURL": this.getURL,
         "getPath": this.getPath,
-        "isCurrentPath": isCurrentPathFn(this.site.get("siteConfig")["rootDir"], f["docPath"]),
+        "isCurrentPath": isCurrentPathFn(this.site["siteConfig"]["rootDir"], f["docPath"]),
         "__": this.translator.getTranslateFn(lang)
       }));
       if (!(fs instanceof Array)) {
@@ -148,24 +148,24 @@
 
     async processPosts() {
       var i, j, l, len, processed, ps, ref, ref1, results;
-      this.site.get("posts").sort(function(a, b) {
+      this.site["posts"].sort(function(a, b) {
         return -(a["date"] - b["date"]);
       });
       processed = [];
-      ref = this.site.get("posts");
+      ref = this.site["posts"];
       for (j = 0, len = ref.length; j < len; j++) {
         ps = ref[j];
         ps = (await this.processFile(ps));
         processed = processed.concat(ps);
       }
-      this.site.set("posts", processed);
+      this.site["posts"] = processed;
       results = [];
-      for (i = l = 0, ref1 = this.site.get("posts").length; (0 <= ref1 ? l < ref1 : l > ref1); i = 0 <= ref1 ? ++l : --l) {
+      for (i = l = 0, ref1 = this.site["posts"].length; (0 <= ref1 ? l < ref1 : l > ref1); i = 0 <= ref1 ? ++l : --l) {
         if (i > 0) {
-          this.site.get("posts")[i]["next"] = this.site.get("posts")[i - 1];
+          this.site["posts"][i]["next"] = this.site["posts"][i - 1];
         }
-        if (i < this.site.get("posts").length - 1) {
-          results.push(this.site.get("posts")[i]["prev"] = this.site.get("posts")[i + 1]);
+        if (i < this.site["posts"].length - 1) {
+          results.push(this.site["posts"][i]["prev"] = this.site["posts"][i + 1]);
         } else {
           results.push(void 0);
         }
@@ -175,7 +175,7 @@
 
     async processPages() {
       var j, len, p, ps, ref, results;
-      ref = this.site.get("pages");
+      ref = this.site["pages"];
       results = [];
       for (j = 0, len = ref.length; j < len; j++) {
         ps = ref[j];
@@ -194,33 +194,33 @@
     }
 
     saveAssets() {
-      return this.site.get("assets").map((asset) => {
+      return this.site["assets"].map((asset) => {
         this.saveFile(asset);
         return asset;
       });
     }
 
     savePosts() {
-      return this.site.get("posts").map(async(p) => {
-        p["content"] = (await this.site.get("templates")[p["layout"]]["content"](p));
+      return this.site["posts"].map(async(p) => {
+        p["content"] = (await this.site["templates"][p["layout"]]["content"](p));
         this.saveFile(p);
         return p;
       });
     }
 
     savePages() {
-      return this.site.get("pages").map(async(p) => {
-        if (!(p["layout"] in this.site.get("templates"))) {
+      return this.site["pages"].map(async(p) => {
+        if (!(p["layout"] in this.site["templates"])) {
           p["layout"] = "page";
         }
-        p["content"] = (await this.site.get("templates")[p["layout"]]["content"](p));
+        p["content"] = (await this.site["templates"][p["layout"]]["content"](p));
         this.saveFile(p);
         return p;
       });
     }
 
     saveFiles() {
-      return this.site.get("files").map((file) => {
+      return this.site["files"].map((file) => {
         this.saveFile(file);
         return file;
       });
@@ -229,7 +229,7 @@
     buildServerRoutes() {
       var f, j, key, len, ref, results;
       this._ = {};
-      ref = this.site.get("assets").concat(this.site.get("posts")).concat(this.site.get("pages")).concat(this.site.get("files"));
+      ref = this.site["assets"].concat(this.site["posts"]).concat(this.site["pages"]).concat(this.site["files"]);
       results = [];
       for (j = 0, len = ref.length; j < len; j++) {
         f = ref[j];
@@ -243,7 +243,7 @@
     watchTheme() {
       var event, j, len, ref, results;
       this.themeWatcher = chokidar.watch(path.join("**", "*"), {
-        "cwd": this.site.get("themeSrcDir"),
+        "cwd": this.site["siteConfig"]["themeSrcDir"],
         "ignoreInitial": true
       });
       ref = ["add", "change", "unlink"];
@@ -253,21 +253,21 @@
         results.push(((event) => {
           return this.themeWatcher.on(event, async(srcPath) => {
             var file, k, key, l, len1, ref1, ref2, v;
-            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site.get("themeSrcDir"), srcPath))}\``);
-            this.site.set("pages", this.unprocessedSite.get("pages"));
-            file = new File(this.site.get("docDir"), this.site.get("themeSrcDir"), srcPath);
+            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site["siteConfig"]["themeSrcDir"], srcPath))}\``);
+            this.site["pages"] = this.unprocessedSite.get("pages");
+            file = new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["themeSrcDir"], srcPath);
             if (event !== "unlink") {
               file = (await this.loadFile(file));
               if (file["type"] === "template") {
-                ref1 = this.site.get("templates");
+                ref1 = this.site["templates"];
                 for (k in ref1) {
                   v = ref1[k];
-                  this.site.get("templates")[k] = (await this.renderer.render(v));
+                  this.site["templates"][k] = (await this.renderer.render(v));
                 }
               } else if (file["type"] === "asset") {
-                this.site.set("assets", (await Promise.all(this.site.get("assets").map((file) => {
+                this.site["assets"] = (await Promise.all(this.site["assets"].map((file) => {
                   return this.renderer.render(file);
-                }))));
+                })));
               }
             } else {
               ref2 = ["assets", "templates"];
@@ -278,7 +278,7 @@
                 }
               }
             }
-            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
+            this.unprocessedSite.set("pages", this.site["pages"].slice(0));
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();
@@ -293,7 +293,7 @@
     watchSrc() {
       var event, j, len, ref, results;
       this.srcWatcher = chokidar.watch(path.join("**", "*"), {
-        "cwd": this.site.get("srcDir"),
+        "cwd": this.site["siteConfig"]["srcDir"],
         "ignoreInitial": true
       });
       ref = ["add", "change", "unlink"];
@@ -303,15 +303,15 @@
         results.push(((event) => {
           return this.srcWatcher.on(event, async(srcPath) => {
             var file, key, l, len1, ref1;
-            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site.get("srcDir"), srcPath))}\``);
-            this.site.set("pages", this.unprocessedSite.get("pages"));
-            file = new File(this.site.get("docDir"), this.site.get("srcDir"), srcPath);
+            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site["siteConfig"]["srcDir"], srcPath))}\``);
+            this.site["pages"] = this.unprocessedSite.get("pages");
+            file = new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
             if (event !== "unlink") {
               file = (await this.loadFile(file));
               if (file["type"] === "asset") {
-                this.site.set("assets", (await Promise.all(this.site.get("assets").map((file) => {
+                this.site["assets"] = (await Promise.all(this.site["assets"].map((file) => {
                   return this.renderer.render(file);
-                }))));
+                })));
               }
             } else {
               ref1 = ["assets", "pages", "posts"];
@@ -322,7 +322,7 @@
                 }
               }
             }
-            this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
+            this.unprocessedSite.set("pages", this.site["pages"].slice(0));
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();
@@ -365,10 +365,10 @@
           });
         }
         if (res["layout"] != null) {
-          if (!(res["layout"] in this.site.get("templates"))) {
+          if (!(res["layout"] in this.site["templates"])) {
             res["layout"] = "page";
           }
-          response.write((await this.site.get("templates")[res["layout"]]["content"](res)));
+          response.write((await this.site["templates"][res["layout"]]["content"](res)));
         } else {
           response.write(res["content"]);
         }
@@ -394,15 +394,15 @@
       allFiles = ((await matchFiles(path.join("**", "*"), {
         "nodir": true,
         "dot": true,
-        "cwd": this.site.get("themeSrcDir")
+        "cwd": this.site["siteConfig"]["themeSrcDir"]
       }))).map((srcPath) => {
-        return new File(this.site.get("docDir"), this.site.get("themeSrcDir"), srcPath);
+        return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["themeSrcDir"], srcPath);
       }).concat(((await matchFiles(path.join("**", "*"), {
         "nodir": true,
         "dot": true,
-        "cwd": this.site.get("srcDir")
+        "cwd": this.site["siteConfig"]["srcDir"]
       }))).map((srcPath) => {
-        return new File(this.site.get("docDir"), this.site.get("srcDir"), srcPath);
+        return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
       }));
       await Promise.all(allFiles.map(this.loadFile));
       this.saveAssets();
@@ -420,18 +420,18 @@
       allFiles = ((await matchFiles(path.join("**", "*"), {
         "nodir": true,
         "dot": true,
-        "cwd": this.site.get("themeSrcDir")
+        "cwd": this.site["siteConfig"]["themeSrcDir"]
       }))).map((srcPath) => {
-        return new File(this.site.get("docDir"), this.site.get("themeSrcDir"), srcPath);
+        return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["themeSrcDir"], srcPath);
       }).concat(((await matchFiles(path.join("**", "*"), {
         "nodir": true,
         "dot": true,
-        "cwd": this.site.get("srcDir")
+        "cwd": this.site["siteConfig"]["srcDir"]
       }))).map((srcPath) => {
-        return new File(this.site.get("docDir"), this.site.get("srcDir"), srcPath);
+        return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
       }));
       await Promise.all(allFiles.map(this.loadFile));
-      this.unprocessedSite.set("pages", this.site.get("pages").slice(0));
+      this.unprocessedSite.set("pages", this.site["pages"].slice(0));
       this.site = (await this.generator.generate("beforeProcessing", this.site));
       await this.processPosts();
       await this.processPages();

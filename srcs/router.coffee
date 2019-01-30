@@ -32,10 +32,10 @@ class Router
     @themeWatcher = null
     @unprocessedSite = new Site(@site["workDir"])
     @getURL = getURLFn(
-      @site.get("siteConfig")["baseURL"], @site.get("siteConfig")["rootDir"]
+      @site["siteConfig"]["baseURL"], @site["siteConfig"]["rootDir"]
     )
-    @getPath = getPathFn(@site.get("siteConfig")["rootDir"])
-    moment.locale(@site.get("siteConfig")["language"])
+    @getPath = getPathFn(@site["siteConfig"]["rootDir"])
+    moment.locale(@site["siteConfig"]["language"])
 
   readFile: (file) ->
     raw = await fse.readFile(path.join(file["srcDir"], file["srcPath"]))
@@ -61,17 +61,17 @@ class Router
       path.join(file["srcDir"], file["srcPath"])
     )}`...")
     file = await @readFile(file)
-    if file["srcDir"] is @site.get("themeSrcDir")
+    if file["srcDir"] is @site["siteConfig"]["themeSrcDir"]
       file = await @renderer.render(file)
       if path.dirname(file["srcPath"]) isnt "."
         file["type"] = "asset"
         @site.put("assets", file)
       else
         file["type"] = "template"
-        @site.get("templates")[path.basename(
+        @site["templates"][path.basename(
           file["srcPath"], path.extname(file["srcPath"])
         )] = file
-    else if file["srcDir"] is @site.get("srcDir")
+    else if file["srcDir"] is @site["siteConfig"]["srcDir"]
       file = parseFrontMatter(file)
       file = await @renderer.render(file)
       if file["text"] isnt file["raw"]
@@ -94,11 +94,11 @@ class Router
     return @writeFile(file)
 
   processFile: (f) =>
-    lang = f["language"] or @site.get("siteConfig")["language"]
+    lang = f["language"] or @site["siteConfig"]["language"]
     if lang not of @translator.list()
       try
         language = yaml.safeLoad(fse.readFileSync(path.join(
-          @site.get("themeDir"),
+          @site["siteConfig"]["themeDir"],
           "languages",
           "#{lang}.yml"
         )))
@@ -108,16 +108,16 @@ class Router
           @logger.warn(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    fs = await @processer.process(f, @site.get("posts"), {
+    fs = await @processer.process(f, @site["posts"], {
       "site": @site.raw(),
-      "siteConfig": @site.get("siteConfig"),
-      "themeConfig": @site.get("themeConfig"),
+      "siteConfig": @site["siteConfig"],
+      "themeConfig": @site["themeConfig"],
       "moment": moment,
       "getVersion": getVersion,
       "getURL": @getURL,
       "getPath": @getPath,
       "isCurrentPath": isCurrentPathFn(
-        @site.get("siteConfig")["rootDir"], f["docPath"]
+        @site["siteConfig"]["rootDir"], f["docPath"]
       ),
       "__": @translator.getTranslateFn(lang)
     })
@@ -126,92 +126,96 @@ class Router
     return fs
 
   processPosts: () =>
-    @site.get("posts").sort((a, b) ->
+    @site["posts"].sort((a, b) ->
       return -(a["date"] - b["date"])
     )
     processed = []
-    for ps in @site.get("posts")
+    for ps in @site["posts"]
       ps = await @processFile(ps)
       processed = processed.concat(ps)
-    @site.set("posts", processed)
-    for i in [0...@site.get("posts").length]
+    @site["posts"] = processed
+    for i in [0...@site["posts"].length]
       if i > 0
-        @site.get("posts")[i]["next"] = @site.get("posts")[i - 1]
-      if i < @site.get("posts").length - 1
-        @site.get("posts")[i]["prev"] = @site.get("posts")[i + 1]
+        @site["posts"][i]["next"] = @site["posts"][i - 1]
+      if i < @site["posts"].length - 1
+        @site["posts"][i]["prev"] = @site["posts"][i + 1]
 
   processPages: () =>
-    for ps in @site.get("pages")
+    for ps in @site["pages"]
       ps = await @processFile(ps)
       for p in ps
         @site.put("pages", p)
 
   saveAssets: () =>
-    return @site.get("assets").map((asset) =>
+    return @site["assets"].map((asset) =>
       @saveFile(asset)
       return asset
     )
 
   savePosts: () =>
-    return @site.get("posts").map((p) =>
-      p["content"] = await @site.get("templates")[p["layout"]]["content"](p)
+    return @site["posts"].map((p) =>
+      p["content"] = await @site["templates"][p["layout"]]["content"](p)
       @saveFile(p)
       return p
     )
 
   savePages: () =>
-    return @site.get("pages").map((p) =>
-      if p["layout"] not of @site.get("templates")
+    return @site["pages"].map((p) =>
+      if p["layout"] not of @site["templates"]
         p["layout"] = "page"
-      p["content"] = await @site.get("templates")[p["layout"]]["content"](p)
+      p["content"] = await @site["templates"][p["layout"]]["content"](p)
       @saveFile(p)
       return p
     )
 
   saveFiles: () =>
-    return @site.get("files").map((file) =>
+    return @site["files"].map((file) =>
       @saveFile(file)
       return file
     )
 
   buildServerRoutes: () =>
     @_ = {}
-    for f in @site.get("assets").concat(@site.get("posts"))
-    .concat(@site.get("pages")).concat(@site.get("files"))
+    for f in @site["assets"].concat(@site["posts"])
+    .concat(@site["pages"]).concat(@site["files"])
       key = @getPath(f["docPath"])
       @logger.debug("Hikaru is building route `#{colors.cyan(key)}`...")
       @_[key] = f
 
   watchTheme: () =>
     @themeWatcher = chokidar.watch(path.join("**", "*"), {
-      "cwd": @site.get("themeSrcDir"),
+      "cwd": @site["siteConfig"]["themeSrcDir"],
       "ignoreInitial": true
     })
     for event in ["add", "change", "unlink"] then do (event) =>
       @themeWatcher.on(event, (srcPath) =>
         @logger.debug(
           "Hikaru watched event `#{colors.blue(event)}` from `#{
-            colors.cyan(path.join(@site.get("themeSrcDir"), srcPath))
+            colors.cyan(path.join(@site["siteConfig"]["themeSrcDir"], srcPath))
           }`"
         )
-        @site.set("pages", @unprocessedSite.get("pages"))
-        file = new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
+        @site["pages"] = @unprocessedSite.get("pages")
+        file = new File(
+          @site["siteConfig"]["docDir"],
+          @site["siteConfig"]["themeSrcDir"],
+          srcPath
+        )
         if event isnt "unlink"
           file = await @loadFile(file)
           if file["type"] is "template"
-            for k, v of @site.get("templates")
-              @site.get("templates")[k] = await @renderer.render(v)
+            for k, v of @site["templates"]
+              @site["templates"][k] = await @renderer.render(v)
           else if file["type"] is "asset"
-            @site.set("assets", await Promise.all(
-              @site.get("assets").map((file) =>
+            @site["assets"] = await Promise.all(
+              @site["assets"].map((file) =>
                 return @renderer.render(file)
               )
-            ))
+            )
         else
           for key in ["assets", "templates"]
             if @site.del(key, file)?
               break
-        @unprocessedSite.set("pages", @site.get("pages")[0...])
+        @unprocessedSite.set("pages", @site["pages"][0...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
@@ -221,31 +225,35 @@ class Router
 
   watchSrc: () =>
     @srcWatcher = chokidar.watch(path.join("**", "*"), {
-      "cwd": @site.get("srcDir"),
+      "cwd": @site["siteConfig"]["srcDir"],
       "ignoreInitial": true
     })
     for event in ["add", "change", "unlink"] then do (event) =>
       @srcWatcher.on(event, (srcPath) =>
         @logger.debug(
           "Hikaru watched event `#{colors.blue(event)}` from `#{
-            colors.cyan(path.join(@site.get("srcDir"), srcPath))
+            colors.cyan(path.join(@site["siteConfig"]["srcDir"], srcPath))
           }`"
         )
-        @site.set("pages", @unprocessedSite.get("pages"))
-        file = new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
+        @site["pages"] = @unprocessedSite.get("pages")
+        file = new File(
+          @site["siteConfig"]["docDir"],
+          @site["siteConfig"]["srcDir"],
+          srcPath
+        )
         if event isnt "unlink"
           file = await @loadFile(file)
           if file["type"] is "asset"
-            @site.set("assets", await Promise.all(
-              @site.get("assets").map((file) =>
+            @site["assets"] = await Promise.all(
+              @site["assets"].map((file) =>
                 return @renderer.render(file)
               )
-            ))
+            )
         else
           for key in ["assets", "pages", "posts"]
             if @site.del(key, file)?
               break
-        @unprocessedSite.set("pages", @site.get("pages")[0...])
+        @unprocessedSite.set("pages", @site["pages"][0...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
@@ -297,10 +305,10 @@ class Router
           "Content-Type": getContentType(res["docPath"])
         })
       if res["layout"]?
-        if res["layout"] not of @site.get("templates")
+        if res["layout"] not of @site["templates"]
           res["layout"] = "page"
         response.write(
-          await @site.get("templates")[res["layout"]]["content"](res)
+          await @site["templates"][res["layout"]]["content"](res)
         )
       else
         response.write(res["content"])
@@ -327,15 +335,23 @@ class Router
     allFiles = (await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
-      "cwd": @site.get("themeSrcDir")
+      "cwd": @site["siteConfig"]["themeSrcDir"]
     })).map((srcPath) =>
-      return new File(@site.get("docDir"), @site.get("themeSrcDir"), srcPath)
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["themeSrcDir"],
+        srcPath
+      )
     ).concat((await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
-      "cwd": @site.get("srcDir")
+      "cwd": @site["siteConfig"]["srcDir"]
     })).map((srcPath) =>
-      return new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["srcDir"],
+        srcPath
+      )
     ))
     await Promise.all(allFiles.map(@loadFile))
     @saveAssets()
@@ -351,18 +367,26 @@ class Router
     allFiles = (await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
-      "cwd": @site.get("themeSrcDir")
+      "cwd": @site["siteConfig"]["themeSrcDir"]
     })).map((srcPath) =>
-      return new File(@site.get("docDir"),  @site.get("themeSrcDir"), srcPath)
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["themeSrcDir"],
+        srcPath
+      )
     ).concat((await matchFiles(path.join("**", "*"), {
       "nodir": true,
       "dot": true,
-      "cwd": @site.get("srcDir")
+      "cwd": @site["siteConfig"]["srcDir"]
     })).map((srcPath) =>
-      return new File(@site.get("docDir"), @site.get("srcDir"), srcPath)
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["srcDir"],
+        srcPath
+      )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @unprocessedSite.set("pages", @site.get("pages")[0...])
+    @unprocessedSite.set("pages", @site["pages"][0...])
     @site = await @generator.generate("beforeProcessing", @site)
     await @processPosts()
     await @processPages()

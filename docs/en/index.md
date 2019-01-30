@@ -7,13 +7,15 @@ A static site generator that generates routes based on directories naturally.
 # TOC
 
 - For Users
-    - [Install](install.md)
-    - [Init](init.md)
-    - [Config](config.md)
-    - [Write](write.md)
-    - [Command](command.md)
-    - [Deploy](deploy.md)
-    - [Plugins and Scripts](plugins-and-scripts.md)
+    - [Install](user/install.md)
+    - [Init](user/init.md)
+    - [Config](user/config.md)
+    - [Write](user/write.md)
+    - [Command](user/command.md)
+    - [Deploy](user/deploy.md)
+    - [Plugins and Scripts](user/plugins-and-scripts.md)
+- For Developers
+        - WIP
 
 # What is Hikaru?
 

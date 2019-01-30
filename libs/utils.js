@@ -147,7 +147,7 @@
   paginateCategories = function(category, parentPath, perPage, site) {
     var j, len, ref, results, sp, sub;
     results = [];
-    sp = Object.assign(new File(site.get("docDir")), {
+    sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
       "layout": "category",
       "docPath": path.join(parentPath, `${category["name"]}`, "index.html"),
       "title": "category",
