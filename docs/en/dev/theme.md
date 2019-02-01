@@ -84,7 +84,7 @@ Assets may be CSS or JavaScript files, Hikaru internally supports stylus, so you
 
 You can use `getThemeConfig(key)` or `getSiteConfig(key)` in CSS preprocessers to get config.
 
-# Language files.
+# Language Files
 
 You can create file as language files, and their name will be options of site's `language` config. For example you can create `en.yml`:
 
