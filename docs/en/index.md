@@ -15,7 +15,9 @@ A static site generator that generates routes based on directories naturally.
     - [Deploy](user/deploy.md)
     - [Plugins and Scripts](user/plugins-and-scripts.md)
 - For Developers
-        - WIP
+    - [Lifecycle](dev/lifecycle.md)
+    - [Hikaru](dev/hikaru.md)
+    - [Types](dev/types.md)
 
 # What is Hikaru?
 

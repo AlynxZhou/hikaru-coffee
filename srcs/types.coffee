@@ -15,7 +15,6 @@ class Site
       "templates": {},
       "assets": [],
       "pages": [],
-      "subs": [],
       "posts": [],
       "files": [],
       "categories": [],
@@ -61,8 +60,8 @@ class Site
     if not key? or not file?
       return null
     for i in [0...@_[key].length]
-      if @_[key][i]["srcPath"] is file["srcPath"] and
-      @_[key][i]["srcDir"] is file["srcDir"]
+      if @_[key][i]["docPath"] is file["docPath"] and
+      @_[key][i]["docDir"] is file["docDir"]
         return @_[key].splice(i, 1)
     return null
 
@@ -75,9 +74,12 @@ class File
     @docPath = null
     @srcDir = srcDir
     @srcPath = srcPath
-    @date = null
+    @createdTime = null
+    @updatedTime = null
+    @zone = null
     @title = null
-    @name = null
+    @layout = null
+    @comment = false
     @raw = null
     @text = null
     @content = null
@@ -87,8 +89,13 @@ class File
     @tags = []
     @excerpt = null
     @more = null
+    @$ = null
+    @toc = []
+    @posts = []
     @pageArray = []
     @pageIndex = null
+    @next = null
+    @prev = null
 
 class Category
   constructor: (name, posts = [], subs = []) ->
@@ -101,9 +108,17 @@ class Tag
     @name = name
     @posts = posts
 
+class Toc
+  constructor: (name, archor, text, subs = []) ->
+    @name = name
+    @archor = archor
+    @text = text
+    @subs = subs
+
 module.exports = {
   "Site": Site,
   "File": File,
   "Category": Category,
-  "Tag": Tag
+  "Tag": Tag,
+  "Toc": Toc
 }

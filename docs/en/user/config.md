@@ -4,14 +4,20 @@ Site Config
 # TOC
 
 - For Users
-    - [Install](install.md)
-    - [Init](init.md)
-    - [Config](config.md)
-    - [Write](write.md)
-    - [Command](command.md)
-    - [Deploy](deploy.md)
-    - [Plugins and Scripts](plugins-and-scripts.md)
-
+    - [Install](../user/install.md)
+    - [Init](../user/init.md)
+    - [Config](../user/config.md)
+    - [Write](../user/write.md)
+    - [Command](../user/command.md)
+    - [Deploy](../user/deploy.md)
+    - [Plugins and Scripts](../user/plugins-and-scripts.md)
+- For Developers
+    - [Lifecycle](../dev/lifecycle.md)
+    - [Hikaru](../dev/hikaru.md)
+    - [Types](../dev/types.md)
+    - [Utils](../dev/utils.md)
+    - [Extend](../dev/extend.md)
+    - [Theme](../dev/theme.md)
 # Site info
 
 ## `title`
@@ -60,15 +66,15 @@ Your site's doc dir, you can move `docs/` to another name and change this.
 
 ## `themeDir`
 
-Your site's theme, this is a sub dir name under `themes/`, for example, you cloned `hikaru-theme-aria` to `themes/aria`, you need to set it to `aria`.
+Your site's theme, this is a sub dir relative to `themes/`, for example, you cloned `hikaru-theme-aria` to `themes/aria`, you need to set it to `aria`.
 
 ## `categoryDir`
 
-Your site's category sub page, which is generated automatically by Hikaru (No source path), will be put in to this dir.
+A dir to place your site's category sub page generated automatically by Hikaru (No source path), relative to `docDir`.
 
 ## `tagDir`
 
-Your site's tag sub page, which is generated automatically by Hikaru (No source path), will be put in to this dir.
+A dir to place your site's tag sub page generated automatically by Hikaru (No source path), relative to `docDir`.
 
 # Other options
 

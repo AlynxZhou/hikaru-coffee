@@ -4,17 +4,22 @@ Plugins and Scripts
 # TOC
 
 - For Users
-    - [Install](install.md)
-    - [Init](init.md)
-    - [Config](config.md)
-    - [Write](write.md)
-    - [Command](command.md)
-    - [Deploy](deploy.md)
-    - [Plugins and Scripts](plugins-and-scripts.md)
+    - [Install](../user/install.md)
+    - [Init](../user/init.md)
+    - [Config](../user/config.md)
+    - [Write](../user/write.md)
+    - [Command](../user/command.md)
+    - [Deploy](../user/deploy.md)
+    - [Plugins and Scripts](../user/plugins-and-scripts.md)
+- For Developers
+    - [Lifecycle](../dev/lifecycle.md)
+    - [Hikaru](../dev/hikaru.md)
+    - [Types](../dev/types.md)
+    - [Utils](../dev/utils.md)
+    - [Extend](../dev/extend.md)
+    - [Theme](../dev/theme.md)
 
 For some users and developers, they may need some custom functions for their sites or themes, however we cannot add all those to Hikaru, so we support plugins and scripts for them.
-
-**This page is currently WROK IN PROGRESS.**
 
 # Scripts
 
@@ -26,7 +31,7 @@ module.exports = (hikaru) => {
 }
 ```
 
-You can access Hikaru's `Renderer`, `Generator`, `Processer`, `Logger`, `Translator` and `utils` object through the Hikaru object.
+You can access Hikaru's `Renderer`, `Generator`, `Processer`, `Logger`, `Translator`, `types` and `utils` object through the Hikaru object.
 
 # Plugins
 

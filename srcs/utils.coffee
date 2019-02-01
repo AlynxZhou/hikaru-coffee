@@ -5,7 +5,7 @@ glob = require("glob")
 {URL} = require("url")
 moment = require("moment-timezone")
 Promise = require("bluebird")
-{Site, File, Category, Tag} = require("./types")
+{Site, File, Category, Tag, Toc} = require("./types")
 highlight = require("./highlight")
 packageJSON = require("../package.json")
 extMIME = require("../dist/ext-mime.json")
@@ -16,7 +16,7 @@ escapeHTML = (str) ->
   .replace(/</g, "&lt;")
   .replace(/>/g, "&gt;")
   .replace(/"/g, "&quot;")
-  .replace(/"/g, "&#039;")
+  .replace(/'/g, "&#039;")
 
 matchFiles = (pattern, options) ->
   return new Promise((resolve, reject) ->
@@ -82,8 +82,9 @@ parseFrontMatter = (file) ->
 getContentType = (docPath) ->
   return extMIME[path.extname(docPath)] or "application/octet-stream"
 
-paginate = (p, posts, perPage, ctx) ->
-  if not perPage
+paginate = (p, posts, perPage = 10, ctx = {}) ->
+  if perPage instanceof Object
+    ctx = perPage
     perPage = 10
   results = []
   perPagePosts = []
@@ -117,7 +118,10 @@ sortCategories = (category) ->
   for sub in category["subs"]
     sortCategories(sub)
 
-paginateCategories = (category, parentPath, perPage, site) ->
+paginateCategories = (category, parentPath, perPage = 10, site) ->
+  if perPage instanceof Object
+    site = perPage
+    perPage = 10
   results = []
   sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
     "layout": "category",
@@ -142,6 +146,8 @@ getPathFn = (rootDir = path.posix.sep) ->
       rootDir = path.posix.join(path.posix.sep, rootDir)
     if docPath.endsWith("index.html")
       docPath = docPath.substring(0, docPath.length - "index.html".length)
+    else if docPath.endsWith("index.htm")
+      docPath = docPath.substring(0, docPath.length - "index.htm".length)
     return encodeURI(path.posix.join(
       rootDir, docPath.replace(path.win32.sep, path.posix.sep)
     ))
@@ -151,7 +157,7 @@ getURLFn = (baseURL, rootDir = path.posix.sep) ->
   return (docPath = "") ->
     return new URL(getPath(docPath), baseURL)
 
-isCurrentPathFn = (rootDir = path.posix.sep, currentPath) ->
+isCurrentPathFn = (rootDir = path.posix.sep, currentPath = "") ->
   # Must join a "/" before resolve or it will join current work dir.
   getPath = getPathFn(rootDir)
   currentPath = getPath(currentPath)
@@ -209,12 +215,7 @@ genToc = ($) ->
       level = level[level.length - 1]["subs"]
     # Don't set archor to absolute path because bootstrap scrollspy
     # can only accept relative path for ID.
-    level.push({
-      "archor": "##{$(h).attr("id")}",
-      "name": h["name"]
-      "text": $(h).text().trim(),
-      "subs": []
-    })
+    level.push(new Toc(h["name"], "##{$(h).attr("id")}", $(h).text().trim()))
   return toc
 
 resolveLink = ($, baseURL, rootDir, docPath) ->
