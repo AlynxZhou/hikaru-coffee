@@ -18,6 +18,9 @@ A static site generator that generates routes based on directories naturally.
     - [Lifecycle](dev/lifecycle.md)
     - [Hikaru](dev/hikaru.md)
     - [Types](dev/types.md)
+    - [Utils](dev/utils.md)
+    - [Extend](dev/extend.md)
+    - [Theme](dev/theme.md)
 
 # What is Hikaru?
 
