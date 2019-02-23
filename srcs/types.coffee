@@ -79,7 +79,7 @@ class File
     @zone = null
     @title = null
     @layout = null
-    @comment = false
+    @comment = null
     @raw = null
     @text = null
     @content = null

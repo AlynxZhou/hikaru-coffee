@@ -116,7 +116,7 @@
       this.zone = null;
       this.title = null;
       this.layout = null;
-      this.comment = false;
+      this.comment = null;
       this.raw = null;
       this.text = null;
       this.content = null;
