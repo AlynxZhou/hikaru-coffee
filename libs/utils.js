@@ -156,7 +156,9 @@
       "layout": "category",
       "docPath": path.join(parentPath, `${category["name"]}`, "index.html"),
       "title": "category",
-      "name": category["name"].toString()
+      "name": category["name"].toString(),
+      "comment": false,
+      "reward": false
     });
     category["docPath"] = sp["docPath"];
     results = results.concat(paginate(sp, category["posts"], perPage));

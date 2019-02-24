@@ -514,7 +514,9 @@
             "layout": "tag",
             "docPath": path.join(site["siteConfig"]["tagDir"], `${tag["name"]}`, "index.html"),
             "title": "tag",
-            "name": tag["name"].toString()
+            "name": tag["name"].toString(),
+            "comment": false,
+            "reward": false
           });
           tag["docPath"] = sp["docPath"];
           ref2 = paginate(sp, tag["posts"], site["siteConfig"]["perPage"]);

@@ -384,18 +384,14 @@ class Hikaru
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(
-        p, posts, @site["siteConfig"]["perPage"], ctx
-      )
+      return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
     )
 
     @processer.register("archives", (p, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(
-        p, posts, @site["siteConfig"]["perPage"], ctx
-      )
+      return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
     )
 
     @processer.register("categories", (p, posts, ctx) =>
@@ -405,9 +401,7 @@ class Hikaru
     )
 
     @processer.register("tags", (p, posts, ctx) =>
-      return Object.assign(new File(), p, ctx, {
-        "tags": @site["tags"]
-      })
+      return Object.assign(new File(), p, ctx, {"tags": @site["tags"]})
     )
 
     @processer.register(["post", "page"], (p, posts, ctx) =>
@@ -510,7 +504,9 @@ class Hikaru
             site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
           ),
           "title": "tag",
-          "name": tag["name"].toString()
+          "name": tag["name"].toString(),
+          "comment": false,
+          "reward": false
         })
         tag["docPath"] = sp["docPath"]
         for p in paginate(
