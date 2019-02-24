@@ -4,6 +4,8 @@ Hikaru
 A static site generator that generates routes based on directories naturally.
 -----------------------------------------------------------------------------
 
+[![npm](https://img.shields.io/npm/v/hikaru-coffee.svg?style=for-the-badge)](https://www.npmjs.com/package/hikaru-coffee)
+
 # Install
 
 Hikaru is a command line program (not a module) and you can install it from NPM:
