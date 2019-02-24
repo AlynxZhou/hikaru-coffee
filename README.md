@@ -5,6 +5,8 @@ A static site generator that generates routes based on directories naturally.
 -----------------------------------------------------------------------------
 
 [![npm](https://img.shields.io/npm/v/hikaru-coffee.svg?style=for-the-badge)](https://www.npmjs.com/package/hikaru-coffee)
+[![npm](https://img.shields.io/npm/dt/hikaru-coffee.svg?style=for-the-badge)](https://www.npmjs.com/package/hikaru-coffee)
+[![GitHub](https://img.shields.io/github/license/AlynxZhou/hikaru.svg?style=for-the-badge)](https://github.com/AlynxZhou/hikaru/blob/master/LICENSE)
 
 # Install
 
