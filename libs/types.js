@@ -117,6 +117,7 @@
       this.title = null;
       this.layout = null;
       this.comment = null;
+      this.reward = null;
       this.raw = null;
       this.text = null;
       this.content = null;

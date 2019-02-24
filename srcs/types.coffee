@@ -80,6 +80,7 @@ class File
     @title = null
     @layout = null
     @comment = null
+    @reward = null
     @raw = null
     @text = null
     @content = null
