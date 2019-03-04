@@ -50,11 +50,13 @@ Hikaru contains **NO** timezone settings, it use your system timezone.
 
 ## `baseURL`
 
-Your site's base URL, like `https://example.com`
+Your site's base URL, like `https://example.com`. **Don't add trailing `/` to URL.**
 
 ## `rootDir`
 
-Your site's root dir, for example, if you want to put your site in `https://example.com/blog/`, you can set it to `/blog/`, or if you create different sites with different languages, you can set it to `/en/` or `/zh_CN/`. If you don't need those, set it to `/`.
+Your site's root dir, starts with `/` like UNIX path, and also end with a `/` to hint that it is a dir.
+
+For example, if you want to put your site in `https://example.com/blog/`, you can set it to `/blog/`, or if you create different sites with different languages, you can set it to `/en/` or `/zh_CN/`. If you don't need to put your site into a subdir, just set it to `/`.
 
 ## `srcDir`
 

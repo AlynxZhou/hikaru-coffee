@@ -104,13 +104,15 @@ Hikaru always starts `parentPath` with the option `categoryDir` in site config f
 
 Your site maybe a sub directory, and when you convert sources to docs, you have to add dir prefix for links. This helper can receive a prefix and returns you a function that convert `docPath` to a full path for links. So you just pass `getPath` to templates and use it when you create a link. Recommended this instead handle href yourself.
 
+**This helper always deal `docPath` as a relative path to `rootDir`, so if you want to handle some path relative to other path, please join them before pass it to this healper.**
+
 # `getURLFn(baseURL, rootDir = path.posix.sep)`
 
 - `baseURL`: `String`
 - `rootDir`: `String`
 - Return type: `getURL(docPath = "")`
 
-Sometimes you need full URL instead a internal path, this help you make up a base URL and a path prefix. It calls `getPathFn`.
+Sometimes you need full URL instead a internal path, this help you make up a base URL and a path prefix. It calls `getPath()` to handle path internally.
 
 # `isCurrentPathFn(rootDir = path.posix.sep, currentPath = "")`
 
