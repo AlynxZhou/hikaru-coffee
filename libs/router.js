@@ -27,7 +27,7 @@
   ({matchFiles, getVersion, getPathFn, getURLFn, getContentType, isCurrentPathFn, parseFrontMatter} = require("./utils"));
 
   Router = class Router {
-    constructor(logger, renderer, processer, generator, translator, site) {
+    constructor(logger, renderer, processor, generator, translator, site) {
       this.loadFile = this.loadFile.bind(this);
       this.saveFile = this.saveFile.bind(this);
       this.processFile = this.processFile.bind(this);
@@ -46,7 +46,7 @@
       this.serve = this.serve.bind(this);
       this.logger = logger;
       this.renderer = renderer;
-      this.processer = processer;
+      this.processor = processor;
       this.generator = generator;
       this.translator = translator;
       this.site = site;
@@ -129,7 +129,7 @@
           }
         }
       }
-      fs = (await this.processer.process(f, this.site["posts"], {
+      fs = (await this.processor.process(f, this.site["posts"], {
         "site": this.site.raw(),
         "siteConfig": this.site["siteConfig"],
         "themeConfig": this.site["themeConfig"],
