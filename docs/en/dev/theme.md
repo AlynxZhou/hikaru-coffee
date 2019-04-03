@@ -80,9 +80,9 @@ You can use following helpers in template:
 
 # Assets
 
-Assets may be CSS or JavaScript files, Hikaru internally supports stylus, so you can write it instead pure CSS. You can also add other preprocessers via registing renderers.
+Assets may be CSS or JavaScript files, Hikaru internally supports stylus, so you can write it instead pure CSS. You can also add other preprocessors via registing renderers.
 
-You can use `getThemeConfig(key)` or `getSiteConfig(key)` in CSS preprocessers to get config.
+You can use `getThemeConfig(key)` or `getSiteConfig(key)` in CSS preprocessors to get config.
 
 # Language Files
 
@@ -109,8 +109,8 @@ Scripts are just JavaScript files that export a function, which receives a `Hika
 
 ```javascript
 module.exports = (hikaru) => {
-  hikaru.processer.register("post", (p, post, ctx) => {
-    p["content"] = "<p>I add this via processer!</p>" + p["content"]
+  hikaru.processor.register("post", (p, post, ctx) => {
+    p["content"] = "<p>I add this via processor!</p>" + p["content"]
     return p
   })
 }

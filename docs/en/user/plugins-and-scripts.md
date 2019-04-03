@@ -31,7 +31,7 @@ module.exports = (hikaru) => {
 }
 ```
 
-You can access Hikaru's `Renderer`, `Generator`, `Processer`, `Logger`, `Translator`, `types` and `utils` object through the Hikaru object.
+You can access Hikaru's `Renderer`, `Generator`, `Processor`, `Logger`, `Translator`, `types` and `utils` object through the Hikaru object.
 
 # Plugins
 
@@ -39,7 +39,7 @@ For users or devs who wants some independent functions to release, they can crea
 
 They must export a main function like scripts, this will be the entry of a plugin when Hikaru is loading them.
 
-You are supposed to hint the plugin type with words like `renderer`, `generator`, `processer` or `utils`.
+You are supposed to hint the plugin type with words like `renderer`, `generator`, `processor` or `utils`.
 
 For more example, you can read the code of [hikaru-renderer-coffeescript](https://github.com/AlynxZhou/hikaru-renderer-coffeescript/), [hikaru-generator-feed](https://github.com/AlynxZhou/hikaru-generator-feed/).
 

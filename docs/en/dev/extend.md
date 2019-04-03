@@ -34,9 +34,9 @@ Hikaru supports plugins and scripts, but not all part of Hikaru is designed for 
 
 `srcExt` and `docExt` are start with `.`. A file with `srcExt` extend name will be render and change to `docExt`. `Renderer` will call `fn` to render it, `file` is `Hikaru::types.File`. `fn` should return `Hikaru::types.File`.
 
-# `Processer`
+# `Processor`
 
-`Processer` is used to convert a file to a context that can be used by templates. In this time, you can change file content for different layout. Hikaru resolves links and image sources via it.
+`Processor` is used to convert a file to a context that can be used by templates. In this time, you can change file content for different layout. Hikaru resolves links and image sources via it.
 
 ## `register(layout, fn)`
 

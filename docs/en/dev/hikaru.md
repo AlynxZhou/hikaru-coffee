@@ -48,9 +48,9 @@ A `Translator` instance which will be used by other module automatically.
 
 A `Renderer` instance, you can register your renderer function to it.
 
-# `Hikaru::processer`
+# `Hikaru::processor`
 
-A `Processer` instance, you can register your processer function to it.
+A `Processor` instance, you can register your processor function to it.
 
 # `Hikaru::Generator`
 

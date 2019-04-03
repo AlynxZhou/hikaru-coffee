@@ -2,7 +2,7 @@ colors = require("colors/safe")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 
-class Processer
+class Processor
   constructor: (logger) ->
     @logger = logger
     @_ = {}
@@ -33,4 +33,4 @@ class Processer
       return p
     return Object.assign(new File(), p, ctx)
 
-module.exports = Processer
+module.exports = Processor

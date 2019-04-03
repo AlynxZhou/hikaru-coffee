@@ -13,7 +13,7 @@ nib = require("nib")
 
 Logger = require("./logger")
 Renderer = require("./renderer")
-Processer = require("./processer")
+Processor = require("./processor")
 Generator = require("./generator")
 Translator = require("./translator")
 Router = require("./router")
@@ -232,7 +232,7 @@ class Hikaru
 
   loadModules: () =>
     @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
-    @processer = new Processer(@logger)
+    @processor = new Processor(@logger)
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
     try
@@ -246,11 +246,11 @@ class Hikaru
       if err["code"] is "ENOENT"
         @logger.warn("Hikaru cannot find default language file in your theme.")
     @router = new Router(
-      @logger, @renderer, @processer, @generator, @translator, @site
+      @logger, @renderer, @processor, @generator, @translator, @site
     )
     try
       @registerInternalRenderers()
-      @registerInternalProcessers()
+      @registerInternalProcessors()
       @registerInternalGenerators()
     catch err
       @logger.warn("Hikaru cannot register internal functions!")
@@ -379,32 +379,32 @@ class Hikaru
       )
     )
 
-  registerInternalProcessers: () =>
-    @processer.register("index", (p, posts, ctx) =>
+  registerInternalProcessors: () =>
+    @processor.register("index", (p, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
       return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
     )
 
-    @processer.register("archives", (p, posts, ctx) =>
+    @processor.register("archives", (p, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
       return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
     )
 
-    @processer.register("categories", (p, posts, ctx) =>
+    @processor.register("categories", (p, posts, ctx) =>
       return Object.assign(new File(), p, ctx, {
         "categories": @site["categories"]
       })
     )
 
-    @processer.register("tags", (p, posts, ctx) =>
+    @processor.register("tags", (p, posts, ctx) =>
       return Object.assign(new File(), p, ctx, {"tags": @site["tags"]})
     )
 
-    @processer.register(["post", "page"], (p, posts, ctx) =>
+    @processor.register(["post", "page"], (p, posts, ctx) =>
       $ = cheerio.load(p["content"])
       resolveHeaderIds($)
       toc = genToc($)

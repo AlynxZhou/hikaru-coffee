@@ -20,10 +20,10 @@ Promise = require("bluebird")
 } = require("./utils")
 
 class Router
-  constructor: (logger, renderer, processer, generator, translator, site) ->
+  constructor: (logger, renderer, processor, generator, translator, site) ->
     @logger = logger
     @renderer = renderer
-    @processer = processer
+    @processor = processor
     @generator = generator
     @translator = translator
     @site = site
@@ -108,7 +108,7 @@ class Router
           @logger.warn(
             "Hikaru cannot find `#{lang}` language file in your theme."
           )
-    fs = await @processer.process(f, @site["posts"], {
+    fs = await @processor.process(f, @site["posts"], {
       "site": @site.raw(),
       "siteConfig": @site["siteConfig"],
       "themeConfig": @site["themeConfig"],

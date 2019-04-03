@@ -41,7 +41,7 @@ And then `Router` will call first module `Renderer`, it contains registered func
 
 Then `Router` call the second module `Generator`, because some info and data needed by some page are not from files but gathered by functions, so we run those functions registered with `beforeProcessing` tag, it get a reference of site and add some property to site for use, like categories and tags.
 
-To make a post or a page complete, we still need to compile them with templates, not only content but other thing is need when compiling, so `Router` call `Processer` to do this. Variables and funtions will be copied to file objects and if you want to do something like changing content or pagination for some layouts, you can register a processer function.
+To make a post or a page complete, we still need to compile them with templates, not only content but other thing is need when compiling, so `Router` call `Processor` to do this. Variables and funtions will be copied to file objects and if you want to do something like changing content or pagination for some layouts, you can register a processor function.
 
 After processing `Router` will call `Generator` again with `afterProcessing`. Though Hikaru builds routes with directory structures, some output files don't have source files like sitemap files. So we create `File` objects manually in generator functions before saving.
 
