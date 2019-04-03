@@ -302,7 +302,7 @@ class Hikaru
 
   registerInternalRenderers: () =>
     njkConfig = Object.assign(
-      {"autoescape": false}, @site["siteConfig"]["nunjucks"]
+      {"autoescape": false, "noCache": true}, @site["siteConfig"]["nunjucks"]
     )
     njkEnv = nunjucks.configure(@site["siteConfig"]["themeSrcDir"], njkConfig)
     @renderer.register([".njk", ".j2"], null, (file, ctx) ->

@@ -289,7 +289,8 @@
     registerInternalRenderers() {
       var markedConfig, njkConfig, njkEnv, stylConfig;
       njkConfig = Object.assign({
-        "autoescape": false
+        "autoescape": false,
+        "noCache": true
       }, this.site["siteConfig"]["nunjucks"]);
       njkEnv = nunjucks.configure(this.site["siteConfig"]["themeSrcDir"], njkConfig);
       this.renderer.register([".njk", ".j2"], null, function(file, ctx) {
