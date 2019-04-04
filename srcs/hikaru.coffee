@@ -384,14 +384,22 @@ class Hikaru
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
+      if @site["siteConfig"]["perPage"] instanceof Object
+        perPage = @site["siteConfig"]["perPage"]["index"]
+      else
+        perPage = @site["siteConfig"]["perPage"]
+      return paginate(p, posts, perPage, ctx)
     )
 
     @processor.register("archives", (p, posts, ctx) =>
       posts.sort((a, b) ->
         return -(a["date"] - b["date"])
       )
-      return paginate(p, posts, @site["siteConfig"]["perPage"], ctx)
+      if @site["siteConfig"]["perPage"] instanceof Object
+        perPage = @site["siteConfig"]["perPage"]["archives"]
+      else
+        perPage = @site["siteConfig"]["perPage"]
+      return paginate(p, posts, perPage, ctx)
     )
 
     @processor.register("categories", (p, posts, ctx) =>
@@ -455,13 +463,14 @@ class Hikaru
       categories.sort((a, b) ->
         return a["name"].localeCompare(b["name"])
       )
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["category"]
+      else
+        perPage = site["siteConfig"]["perPage"]
       for sub in categories
         sortCategories(sub)
         for p in paginateCategories(
-          sub,
-          site["siteConfig"]["categoryDir"],
-          site["siteConfig"]["perPage"],
-          site
+          sub, site["siteConfig"]["categoryDir"], perPage, site
         )
           site.put("pages", p)
       site["categories"] = categories
@@ -494,6 +503,10 @@ class Hikaru
       tags.sort((a, b) ->
         return a["name"].localeCompare(b["name"])
       )
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["tag"]
+      else
+        perPage = site["siteConfig"]["perPage"]
       for tag in tags
         tag["posts"].sort((a, b) ->
           return -(a["date"] - b["date"])
@@ -509,9 +522,7 @@ class Hikaru
           "reward": false
         })
         tag["docPath"] = sp["docPath"]
-        for p in paginate(
-          sp, tag["posts"], site["siteConfig"]["perPage"]
-        )
+        for p in paginate(sp, tag["posts"], perPage)
           site.put("pages", p)
       site["tags"] = tags
       site["tagsLength"] = tagsLength

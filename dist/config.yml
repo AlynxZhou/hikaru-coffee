@@ -13,7 +13,11 @@ themeDir: aria
 categoryDir: categories
 tagDir: tags
 
-perPage: 10
+perPage:
+  index: 10
+  archives: 15
+  category: 15
+  tag: 15
 
 skipRender:
   - README.md

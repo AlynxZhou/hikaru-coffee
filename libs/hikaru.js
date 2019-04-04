@@ -373,16 +373,28 @@
 
     registerInternalProcessors() {
       this.processor.register("index", (p, posts, ctx) => {
+        var perPage;
         posts.sort(function(a, b) {
           return -(a["date"] - b["date"]);
         });
-        return paginate(p, posts, this.site["siteConfig"]["perPage"], ctx);
+        if (this.site["siteConfig"]["perPage"] instanceof Object) {
+          perPage = this.site["siteConfig"]["perPage"]["index"];
+        } else {
+          perPage = this.site["siteConfig"]["perPage"];
+        }
+        return paginate(p, posts, perPage, ctx);
       });
       this.processor.register("archives", (p, posts, ctx) => {
+        var perPage;
         posts.sort(function(a, b) {
           return -(a["date"] - b["date"]);
         });
-        return paginate(p, posts, this.site["siteConfig"]["perPage"], ctx);
+        if (this.site["siteConfig"]["perPage"] instanceof Object) {
+          perPage = this.site["siteConfig"]["perPage"]["archives"];
+        } else {
+          perPage = this.site["siteConfig"]["perPage"];
+        }
+        return paginate(p, posts, perPage, ctx);
       });
       this.processor.register("categories", (p, posts, ctx) => {
         return Object.assign(new File(), p, ctx, {
@@ -417,7 +429,7 @@
 
     registerInternalGenerators() {
       this.generator.register("beforeProcessing", function(site) {
-        var cateName, categories, categoriesLength, category, found, i, j, l, len, len1, len2, len3, len4, m, n, newCate, p, post, postCategories, ref, ref1, ref2, sub, subCategories;
+        var cateName, categories, categoriesLength, category, found, i, j, l, len, len1, len2, len3, len4, m, n, newCate, p, perPage, post, postCategories, ref, ref1, ref2, sub, subCategories;
         // Generate categories
         categories = [];
         categoriesLength = 0;
@@ -456,10 +468,15 @@
         categories.sort(function(a, b) {
           return a["name"].localeCompare(b["name"]);
         });
+        if (site["siteConfig"]["perPage"] instanceof Object) {
+          perPage = site["siteConfig"]["perPage"]["category"];
+        } else {
+          perPage = site["siteConfig"]["perPage"];
+        }
         for (m = 0, len3 = categories.length; m < len3; m++) {
           sub = categories[m];
           sortCategories(sub);
-          ref2 = paginateCategories(sub, site["siteConfig"]["categoryDir"], site["siteConfig"]["perPage"], site);
+          ref2 = paginateCategories(sub, site["siteConfig"]["categoryDir"], perPage, site);
           for (n = 0, len4 = ref2.length; n < len4; n++) {
             p = ref2[n];
             site.put("pages", p);
@@ -470,7 +487,7 @@
         return site;
       });
       return this.generator.register("beforeProcessing", function(site) {
-        var found, i, j, l, len, len1, len2, len3, len4, m, n, newTag, p, post, postTags, ref, ref1, ref2, sp, tag, tagName, tags, tagsLength;
+        var found, i, j, l, len, len1, len2, len3, len4, m, n, newTag, p, perPage, post, postTags, ref, ref1, ref2, sp, tag, tagName, tags, tagsLength;
         // Generate tags.
         tags = [];
         tagsLength = 0;
@@ -506,6 +523,11 @@
         tags.sort(function(a, b) {
           return a["name"].localeCompare(b["name"]);
         });
+        if (site["siteConfig"]["perPage"] instanceof Object) {
+          perPage = site["siteConfig"]["perPage"]["tag"];
+        } else {
+          perPage = site["siteConfig"]["perPage"];
+        }
         for (m = 0, len3 = tags.length; m < len3; m++) {
           tag = tags[m];
           tag["posts"].sort(function(a, b) {
@@ -520,7 +542,7 @@
             "reward": false
           });
           tag["docPath"] = sp["docPath"];
-          ref2 = paginate(sp, tag["posts"], site["siteConfig"]["perPage"]);
+          ref2 = paginate(sp, tag["posts"], perPage);
           for (n = 0, len4 = ref2.length; n < len4; n++) {
             p = ref2[n];
             site.put("pages", p);
