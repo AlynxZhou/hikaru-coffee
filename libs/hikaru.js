@@ -378,9 +378,9 @@
           return -(a["date"] - b["date"]);
         });
         if (this.site["siteConfig"]["perPage"] instanceof Object) {
-          perPage = this.site["siteConfig"]["perPage"]["index"];
+          perPage = this.site["siteConfig"]["perPage"]["index"] || 10;
         } else {
-          perPage = this.site["siteConfig"]["perPage"];
+          perPage = this.site["siteConfig"]["perPage"] || 10;
         }
         return paginate(p, posts, perPage, ctx);
       });
@@ -390,9 +390,9 @@
           return -(a["date"] - b["date"]);
         });
         if (this.site["siteConfig"]["perPage"] instanceof Object) {
-          perPage = this.site["siteConfig"]["perPage"]["archives"];
+          perPage = this.site["siteConfig"]["perPage"]["archives"] || 10;
         } else {
-          perPage = this.site["siteConfig"]["perPage"];
+          perPage = this.site["siteConfig"]["perPage"] || 10;
         }
         return paginate(p, posts, perPage, ctx);
       });
@@ -469,9 +469,9 @@
           return a["name"].localeCompare(b["name"]);
         });
         if (site["siteConfig"]["perPage"] instanceof Object) {
-          perPage = site["siteConfig"]["perPage"]["category"];
+          perPage = site["siteConfig"]["perPage"]["category"] || 10;
         } else {
-          perPage = site["siteConfig"]["perPage"];
+          perPage = site["siteConfig"]["perPage"] || 10;
         }
         for (m = 0, len3 = categories.length; m < len3; m++) {
           sub = categories[m];
@@ -524,9 +524,9 @@
           return a["name"].localeCompare(b["name"]);
         });
         if (site["siteConfig"]["perPage"] instanceof Object) {
-          perPage = site["siteConfig"]["perPage"]["tag"];
+          perPage = site["siteConfig"]["perPage"]["tag"] || 10;
         } else {
-          perPage = site["siteConfig"]["perPage"];
+          perPage = site["siteConfig"]["perPage"] || 10;
         }
         for (m = 0, len3 = tags.length; m < len3; m++) {
           tag = tags[m];

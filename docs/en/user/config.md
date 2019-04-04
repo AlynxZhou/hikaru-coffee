@@ -82,7 +82,19 @@ A dir to place your site's tag sub page generated automatically by Hikaru (No so
 
 ## `perPage`
 
-When paginating, how many posts in a single page.
+When paginating, how many posts in a single page. You can just set a number for all layout, or you can set it as an object to let different layout hold different number of posts.
+
+```yaml
+# One for all.
+perPage: 10
+
+# Differs from layouts.
+perPage:
+  index: 10
+  archives: 15
+  category: 15
+  tag: 15
+```
 
 ## `skipRender`
 

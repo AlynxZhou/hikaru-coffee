@@ -385,9 +385,9 @@ class Hikaru
         return -(a["date"] - b["date"])
       )
       if @site["siteConfig"]["perPage"] instanceof Object
-        perPage = @site["siteConfig"]["perPage"]["index"]
+        perPage = @site["siteConfig"]["perPage"]["index"] or 10
       else
-        perPage = @site["siteConfig"]["perPage"]
+        perPage = @site["siteConfig"]["perPage"] or 10
       return paginate(p, posts, perPage, ctx)
     )
 
@@ -396,9 +396,9 @@ class Hikaru
         return -(a["date"] - b["date"])
       )
       if @site["siteConfig"]["perPage"] instanceof Object
-        perPage = @site["siteConfig"]["perPage"]["archives"]
+        perPage = @site["siteConfig"]["perPage"]["archives"] or 10
       else
-        perPage = @site["siteConfig"]["perPage"]
+        perPage = @site["siteConfig"]["perPage"] or 10
       return paginate(p, posts, perPage, ctx)
     )
 
@@ -464,9 +464,9 @@ class Hikaru
         return a["name"].localeCompare(b["name"])
       )
       if site["siteConfig"]["perPage"] instanceof Object
-        perPage = site["siteConfig"]["perPage"]["category"]
+        perPage = site["siteConfig"]["perPage"]["category"] or 10
       else
-        perPage = site["siteConfig"]["perPage"]
+        perPage = site["siteConfig"]["perPage"] or 10
       for sub in categories
         sortCategories(sub)
         for p in paginateCategories(
@@ -504,9 +504,9 @@ class Hikaru
         return a["name"].localeCompare(b["name"])
       )
       if site["siteConfig"]["perPage"] instanceof Object
-        perPage = site["siteConfig"]["perPage"]["tag"]
+        perPage = site["siteConfig"]["perPage"]["tag"] or 10
       else
-        perPage = site["siteConfig"]["perPage"]
+        perPage = site["siteConfig"]["perPage"] or 10
       for tag in tags
         tag["posts"].sort((a, b) ->
           return -(a["date"] - b["date"])
