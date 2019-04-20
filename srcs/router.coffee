@@ -215,7 +215,7 @@ class Router
           for key in ["assets", "templates"]
             if @site.del(key, file)?
               break
-        @unprocessedSite.set("pages", @site["pages"][0...])
+        @unprocessedSite.set("pages", [@site["pages"]...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
@@ -253,7 +253,7 @@ class Router
           for key in ["assets", "pages", "posts"]
             if @site.del(key, file)?
               break
-        @unprocessedSite.set("pages", @site["pages"][0...])
+        @unprocessedSite.set("pages", [@site["pages"]...])
         @site = await @generator.generate("beforeProcessing", @site)
         await @processPosts()
         await @processPages()
@@ -386,7 +386,7 @@ class Router
       )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @unprocessedSite.set("pages", @site["pages"][0...])
+    @unprocessedSite.set("pages", [@site["pages"]...])
     @site = await @generator.generate("beforeProcessing", @site)
     await @processPosts()
     await @processPages()

@@ -278,7 +278,7 @@
                 }
               }
             }
-            this.unprocessedSite.set("pages", this.site["pages"].slice(0));
+            this.unprocessedSite.set("pages", [...this.site["pages"]]);
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();
@@ -322,7 +322,7 @@
                 }
               }
             }
-            this.unprocessedSite.set("pages", this.site["pages"].slice(0));
+            this.unprocessedSite.set("pages", [...this.site["pages"]]);
             this.site = (await this.generator.generate("beforeProcessing", this.site));
             await this.processPosts();
             await this.processPages();
@@ -431,7 +431,7 @@
         return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
       }));
       await Promise.all(allFiles.map(this.loadFile));
-      this.unprocessedSite.set("pages", this.site["pages"].slice(0));
+      this.unprocessedSite.set("pages", [...this.site["pages"]]);
       this.site = (await this.generator.generate("beforeProcessing", this.site));
       await this.processPosts();
       await this.processPages();
