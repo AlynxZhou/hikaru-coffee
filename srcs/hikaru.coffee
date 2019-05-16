@@ -413,7 +413,7 @@ class Hikaru
     )
 
     @processor.register(["post", "page"], (p, posts, ctx) =>
-      $ = cheerio.load(p["content"])
+      $ = cheerio.load(p["content"], {"decodeEntities": false})
       resolveHeaderIds($)
       toc = genToc($)
       resolveLink(

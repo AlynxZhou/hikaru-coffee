@@ -408,7 +408,9 @@
       });
       return this.processor.register(["post", "page"], (p, posts, ctx) => {
         var $, split, toc;
-        $ = cheerio.load(p["content"]);
+        $ = cheerio.load(p["content"], {
+          "decodeEntities": false
+        });
         resolveHeaderIds($);
         toc = genToc($);
         resolveLink($, this.site["siteConfig"]["baseURL"], this.site["siteConfig"]["rootDir"], p["docPath"]);
