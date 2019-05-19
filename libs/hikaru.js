@@ -408,6 +408,9 @@
       });
       return this.processor.register(["post", "page"], (p, posts, ctx) => {
         var $, split, toc;
+        // Preventing cheerio decode `&lt;`.
+        // Only work with cheerio version less than or equal to `0.22.0`,
+        // which uses `htmlparser2` as its parser.
         $ = cheerio.load(p["content"], {
           "decodeEntities": false
         });
@@ -415,7 +418,8 @@
         toc = genToc($);
         resolveLink($, this.site["siteConfig"]["baseURL"], this.site["siteConfig"]["rootDir"], p["docPath"]);
         resolveImage($, this.site["siteConfig"]["rootDir"], p["docPath"]);
-        p["content"] = $("body").html();
+        // May change after cheerio switching to `parse5`.
+        p["content"] = $.html();
         if (p["content"].indexOf("<!--more-->") !== -1) {
           split = p["content"].split("<!--more-->");
           p["excerpt"] = split[0];

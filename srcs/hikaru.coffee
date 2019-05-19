@@ -413,6 +413,9 @@ class Hikaru
     )
 
     @processor.register(["post", "page"], (p, posts, ctx) =>
+      # Preventing cheerio decode `&lt;`.
+      # Only work with cheerio version less than or equal to `0.22.0`,
+      # which uses `htmlparser2` as its parser.
       $ = cheerio.load(p["content"], {"decodeEntities": false})
       resolveHeaderIds($)
       toc = genToc($)
@@ -423,7 +426,8 @@ class Hikaru
         p["docPath"]
       )
       resolveImage($, @site["siteConfig"]["rootDir"], p["docPath"])
-      p["content"] = $("body").html()
+      # May change after cheerio switching to `parse5`.
+      p["content"] = $.html()
       if p["content"].indexOf("<!--more-->") isnt -1
         split = p["content"].split("<!--more-->")
         p["excerpt"] = split[0]
