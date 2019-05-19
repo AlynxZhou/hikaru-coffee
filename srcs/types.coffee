@@ -49,21 +49,26 @@ class Site
   put: (key, file) =>
     if not key? or not file?
       return
-    for i in [0...@_[key].length]
-      if @_[key][i]["docPath"] is file["docPath"] and
-      @_[key][i]["docDir"] is file["docDir"]
-        @_[key][i] = file
-        return
-    @_[key].push(file)
+    i = @_[key].findIndex((element) ->
+      return element["docPath"] is file["docPath"] and
+      element["docDir"] is file["docDir"]
+    )
+    if i isnt -1
+      @_[key][i] = file
+    else
+      @_[key].push(file)
 
   del: (key, file) =>
     if not key? or not file?
       return null
-    for i in [0...@_[key].length]
-      if @_[key][i]["docPath"] is file["docPath"] and
-      @_[key][i]["docDir"] is file["docDir"]
-        return @_[key].splice(i, 1)
-    return null
+    i = @_[key].findIndex((element) ->
+      return element["docPath"] is file["docPath"] and
+      element["docDir"] is file["docDir"]
+    )
+    if i isnt -1
+      return @_[key].splice(i, 1)
+    else
+      return null
 
   raw: () =>
     return @_

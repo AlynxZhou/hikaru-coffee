@@ -38,9 +38,9 @@
       this.savePages = this.savePages.bind(this);
       this.saveFiles = this.saveFiles.bind(this);
       this.buildServerRoutes = this.buildServerRoutes.bind(this);
-      this.watchTheme = this.watchTheme.bind(this);
-      this.watchSrc = this.watchSrc.bind(this);
+      this.watchAll = this.watchAll.bind(this);
       this.unwatchAll = this.unwatchAll.bind(this);
+      this.handleEvents = this.handleEvents.bind(this);
       this.listen = this.listen.bind(this);
       this.build = this.build.bind(this);
       this.serve = this.serve.bind(this);
@@ -51,9 +51,10 @@
       this.translator = translator;
       this.site = site;
       this._ = {};
-      this.srcWatcher = null;
-      this.themeWatcher = null;
-      this.unprocessedSite = new Site(this.site["workDir"]);
+      this.watchers = [];
+      this.watchedEvents = [];
+      this.sourcePages = [];
+      this.handling = false;
       this.getURL = getURLFn(this.site["siteConfig"]["baseURL"], this.site["siteConfig"]["rootDir"]);
       this.getPath = getPathFn(this.site["siteConfig"]["rootDir"]);
       moment.locale(this.site["siteConfig"]["language"]);
@@ -240,105 +241,101 @@
       return results;
     }
 
-    watchTheme() {
-      var event, j, len, ref, results;
-      this.themeWatcher = chokidar.watch(path.join("**", "*"), {
-        "cwd": this.site["siteConfig"]["themeSrcDir"],
-        "ignoreInitial": true
-      });
-      ref = ["add", "change", "unlink"];
+    watchAll() {
+      var j, len, ref, results, srcDir;
+      ref = [this.site["siteConfig"]["themeSrcDir"], this.site["siteConfig"]["srcDir"]];
       results = [];
       for (j = 0, len = ref.length; j < len; j++) {
-        event = ref[j];
-        results.push(((event) => {
-          return this.themeWatcher.on(event, async(srcPath) => {
-            var file, k, key, l, len1, ref1, ref2, v;
-            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site["siteConfig"]["themeSrcDir"], srcPath))}\``);
-            this.site["pages"] = this.unprocessedSite.get("pages");
-            file = new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["themeSrcDir"], srcPath);
-            if (event !== "unlink") {
-              file = (await this.loadFile(file));
-              if (file["type"] === "template") {
-                ref1 = this.site["templates"];
-                for (k in ref1) {
-                  v = ref1[k];
-                  this.site["templates"][k] = (await this.renderer.render(v));
-                }
-              } else if (file["type"] === "asset") {
-                this.site["assets"] = (await Promise.all(this.site["assets"].map((file) => {
-                  return this.renderer.render(file);
-                })));
-              }
-            } else {
-              ref2 = ["assets", "templates"];
-              for (l = 0, len1 = ref2.length; l < len1; l++) {
-                key = ref2[l];
-                if (this.site.del(key, file) != null) {
-                  break;
-                }
-              }
-            }
-            this.unprocessedSite.set("pages", [...this.site["pages"]]);
-            this.site = (await this.generator.generate("beforeProcessing", this.site));
-            await this.processPosts();
-            await this.processPages();
-            this.site = (await this.generator.generate("afterProcessing", this.site));
-            return this.buildServerRoutes();
+        srcDir = ref[j];
+        results.push(((srcDir) => {
+          var event, l, len1, ref1, results1, watcher;
+          watcher = chokidar.watch(path.join("**", "*"), {
+            "cwd": srcDir,
+            "ignoreInitial": true
           });
-        })(event));
-      }
-      return results;
-    }
-
-    watchSrc() {
-      var event, j, len, ref, results;
-      this.srcWatcher = chokidar.watch(path.join("**", "*"), {
-        "cwd": this.site["siteConfig"]["srcDir"],
-        "ignoreInitial": true
-      });
-      ref = ["add", "change", "unlink"];
-      results = [];
-      for (j = 0, len = ref.length; j < len; j++) {
-        event = ref[j];
-        results.push(((event) => {
-          return this.srcWatcher.on(event, async(srcPath) => {
-            var file, key, l, len1, ref1;
-            this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(this.site["siteConfig"]["srcDir"], srcPath))}\``);
-            this.site["pages"] = this.unprocessedSite.get("pages");
-            file = new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
-            if (event !== "unlink") {
-              file = (await this.loadFile(file));
-              if (file["type"] === "asset") {
-                this.site["assets"] = (await Promise.all(this.site["assets"].map((file) => {
-                  return this.renderer.render(file);
-                })));
-              }
-            } else {
-              ref1 = ["assets", "pages", "posts"];
-              for (l = 0, len1 = ref1.length; l < len1; l++) {
-                key = ref1[l];
-                if (this.site.del(key, file) != null) {
-                  break;
+          this.watchers.push(watcher);
+          ref1 = ["add", "change", "unlink"];
+          results1 = [];
+          for (l = 0, len1 = ref1.length; l < len1; l++) {
+            event = ref1[l];
+            results1.push(((event) => {
+              return watcher.on(event, (srcPath) => {
+                var i;
+                this.logger.debug(`Hikaru watched event \`${colors.blue(event)}\` from \`${colors.cyan(path.join(srcDir, srcPath))}\``);
+                i = this.watchedEvents.findIndex(function(p) {
+                  return p["srcDir"] === srcDir && p["srcPath"] === srcPath;
+                });
+                if (i !== -1) {
+                  // Just update event.
+                  this.watchedEvents[i]["type"] = event;
+                } else {
+                  // Not found.
+                  this.watchedEvents.push({
+                    "type": event,
+                    "srcDir": srcDir,
+                    "srcPath": srcPath
+                  });
                 }
-              }
-            }
-            this.unprocessedSite.set("pages", [...this.site["pages"]]);
-            this.site = (await this.generator.generate("beforeProcessing", this.site));
-            await this.processPosts();
-            await this.processPages();
-            this.site = (await this.generator.generate("afterProcessing", this.site));
-            return this.buildServerRoutes();
-          });
-        })(event));
+                return setImmediate(this.handleEvents);
+              });
+            })(event));
+          }
+          return results1;
+        })(srcDir));
       }
       return results;
     }
 
     unwatchAll() {
-      this.themeWatcher.close();
-      this.themeWatcher = null;
-      this.srcWatcher.close();
-      return this.srcWatcher = null;
+      var results, w;
+      results = [];
+      while ((w = this.watchers.shift()) != null) {
+        results.push(w.close());
+      }
+      return results;
+    }
+
+    async handleEvents() {
+      var e, file, j, k, key, len, ref, ref1, v;
+      // Keep handling atomic. Prevent repeatedly handling.
+      if (!this.watchedEvents.length || this.handling) {
+        return;
+      }
+      this.handling = true;
+      this.site["pages"] = this.sourcePages;
+      while ((e = this.watchedEvents.shift()) != null) {
+        file = new File(this.site["siteConfig"]["docDir"], e["srcDir"], e["srcPath"]);
+        if (e["type"] === "unlink") {
+          ref = ["assets", "pages", "posts"];
+          for (j = 0, len = ref.length; j < len; j++) {
+            key = ref[j];
+            if (this.site.del(key, file) != null) {
+              break;
+            }
+          }
+        } else {
+          file = (await this.loadFile(file));
+          // Templates or assets have relations. Need to reload all of them.
+          if (file["type"] === "template") {
+            ref1 = this.site["templates"];
+            for (k in ref1) {
+              v = ref1[k];
+              this.site["templates"][k] = (await this.renderer.render(v));
+            }
+          } else if (file["type"] === "asset") {
+            this.site["assets"] = (await Promise.all(this.site["assets"].map((file) => {
+              return this.renderer.render(file);
+            })));
+          }
+        }
+      }
+      this.sourcePages = [...this.site["pages"]];
+      this.site = (await this.generator.generate("beforeProcessing", this.site));
+      await this.processPosts();
+      await this.processPages();
+      this.site = (await this.generator.generate("afterProcessing", this.site));
+      this.buildServerRoutes();
+      return this.handling = false;
     }
 
     listen(ip, port) {
@@ -385,8 +382,7 @@
       } else {
         server.listen(port);
       }
-      this.watchTheme();
-      return this.watchSrc();
+      return this.watchAll();
     }
 
     async build() {
@@ -431,7 +427,7 @@
         return new File(this.site["siteConfig"]["docDir"], this.site["siteConfig"]["srcDir"], srcPath);
       }));
       await Promise.all(allFiles.map(this.loadFile));
-      this.unprocessedSite.set("pages", [...this.site["pages"]]);
+      this.sourcePages = [...this.site["pages"]];
       this.site = (await this.generator.generate("beforeProcessing", this.site));
       await this.processPosts();
       await this.processPages();

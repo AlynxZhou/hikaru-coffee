@@ -73,30 +73,33 @@
     }
 
     put(key, file) {
-      var i, j, ref;
+      var i;
       if ((key == null) || (file == null)) {
         return;
       }
-      for (i = j = 0, ref = this._[key].length; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-        if (this._[key][i]["docPath"] === file["docPath"] && this._[key][i]["docDir"] === file["docDir"]) {
-          this._[key][i] = file;
-          return;
-        }
+      i = this._[key].findIndex(function(element) {
+        return element["docPath"] === file["docPath"] && element["docDir"] === file["docDir"];
+      });
+      if (i !== -1) {
+        return this._[key][i] = file;
+      } else {
+        return this._[key].push(file);
       }
-      return this._[key].push(file);
     }
 
     del(key, file) {
-      var i, j, ref;
+      var i;
       if ((key == null) || (file == null)) {
         return null;
       }
-      for (i = j = 0, ref = this._[key].length; (0 <= ref ? j < ref : j > ref); i = 0 <= ref ? ++j : --j) {
-        if (this._[key][i]["docPath"] === file["docPath"] && this._[key][i]["docDir"] === file["docDir"]) {
-          return this._[key].splice(i, 1);
-        }
+      i = this._[key].findIndex(function(element) {
+        return element["docPath"] === file["docPath"] && element["docDir"] === file["docDir"];
+      });
+      if (i !== -1) {
+        return this._[key].splice(i, 1);
+      } else {
+        return null;
       }
-      return null;
     }
 
     raw() {
