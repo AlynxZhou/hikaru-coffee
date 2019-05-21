@@ -116,9 +116,16 @@
     }
 
     clean(workDir = ".", configPath) {
-      var siteConfig;
+      var err, siteConfig;
       configPath = configPath || path.join(workDir, "config.yml");
-      siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"));
+      try {
+        siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"));
+      } catch (error) {
+        err = error;
+        this.logger.warn("Hikaru cannot find site config!");
+        this.logger.error(err);
+        process.exit(-1);
+      }
       if ((siteConfig != null ? siteConfig["docDir"] : void 0) == null) {
         return;
       }
@@ -200,21 +207,14 @@
       this.site["siteConfig"]["categoryDir"] = this.site["siteConfig"]["categoryDir"] || "categories";
       this.site["siteConfig"]["tagDir"] = this.site["siteConfig"]["tagDir"] || "tags";
       try {
-        this.site["themeConfig"] = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "config.yml")));
+        return this.site["themeConfig"] = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "config.yml"), "utf8"));
       } catch (error) {
         err = error;
         if (err["code"] === "ENOENT") {
           this.logger.warn("Hikaru continues with a empty theme config...");
-          this.site["themeConfig"] = {};
+          return this.site["themeConfig"] = {};
         }
       }
-      // For old plugins and will be removed.
-      this.site["srcDir"] = this.site["siteConfig"]["srcDir"];
-      this.site["docDir"] = this.site["siteConfig"]["docDir"];
-      this.site["themeDir"] = this.site["siteConfig"]["themeDir"];
-      this.site["themeSrcDir"] = this.site["siteConfig"]["themeSrcDir"];
-      this.site["categoryDir"] = this.site["siteConfig"]["categoryDir"];
-      return this.site["tagDir"] = this.site["siteConfig"]["tagDir"];
     }
 
     loadModules() {
@@ -224,7 +224,7 @@
       this.generator = new Generator(this.logger);
       this.translator = new Translator(this.logger);
       try {
-        defaultLanguage = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "languages", "default.yml")));
+        defaultLanguage = yaml.safeLoad(fse.readFileSync(path.join(this.site["siteConfig"]["themeDir"], "languages", "default.yml"), "utf8"));
         this.translator.register("default", defaultLanguage);
       } catch (error) {
         err = error;
@@ -245,13 +245,13 @@
       }
     }
 
-    async loadPlugins() {
+    loadPlugins() {
       var modules, siteJsonPath;
       siteJsonPath = path.join(this.site["workDir"], "package.json");
       if (!fse.existsSync(siteJsonPath)) {
         return;
       }
-      modules = JSON.parse((await fse.readFile(siteJsonPath)))["dependencies"];
+      modules = JSON.parse(fse.readFileSync(siteJsonPath, "utf8"))["dependencies"];
       if (modules == null) {
         return;
       }

@@ -98,7 +98,7 @@ $ hikaru b
 
 Docs: [Here](docs/en/index.md)
 
-Default theme ARIA: [hikaru-themes-aria](https://github.com/AlynxZhou/hikaru-theme-aria/)
+Default theme ARIA: [hikaru-theme-aria](https://github.com/AlynxZhou/hikaru-theme-aria/)
 
 My blog built with Hikaru and ARIA: [喵's StackHarbor](https://sh.alynx.xyz/)
 

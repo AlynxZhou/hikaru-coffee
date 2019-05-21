@@ -132,7 +132,12 @@ class Hikaru
 
   clean: (workDir = ".", configPath) =>
     configPath = configPath or path.join(workDir, "config.yml")
-    siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    try
+      siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
+    catch err
+      @logger.warn("Hikaru cannot find site config!")
+      @logger.error(err)
+      process.exit(-1)
     if not siteConfig?["docDir"]?
       return
     matchFiles("*", {
@@ -215,20 +220,13 @@ class Hikaru
     try
       @site["themeConfig"] = yaml.safeLoad(
         fse.readFileSync(
-          path.join(@site["siteConfig"]["themeDir"], "config.yml")
+          path.join(@site["siteConfig"]["themeDir"], "config.yml"), "utf8"
         )
       )
     catch err
       if err["code"] is "ENOENT"
         @logger.warn("Hikaru continues with a empty theme config...")
         @site["themeConfig"] = {}
-    # For old plugins and will be removed.
-    @site["srcDir"] = @site["siteConfig"]["srcDir"]
-    @site["docDir"] = @site["siteConfig"]["docDir"]
-    @site["themeDir"] = @site["siteConfig"]["themeDir"]
-    @site["themeSrcDir"] = @site["siteConfig"]["themeSrcDir"]
-    @site["categoryDir"] = @site["siteConfig"]["categoryDir"]
-    @site["tagDir"] = @site["siteConfig"]["tagDir"]
 
   loadModules: () =>
     @renderer = new Renderer(@logger, @site["siteConfig"]["skipRender"])
@@ -236,11 +234,9 @@ class Hikaru
     @generator = new Generator(@logger)
     @translator = new Translator(@logger)
     try
-      defaultLanguage = yaml.safeLoad(
-        fse.readFileSync(
-          path.join(@site["siteConfig"]["themeDir"], "languages", "default.yml")
-        )
-      )
+      defaultLanguage = yaml.safeLoad(fse.readFileSync(path.join(
+        @site["siteConfig"]["themeDir"], "languages", "default.yml"
+      ), "utf8"))
       @translator.register("default", defaultLanguage)
     catch err
       if err["code"] is "ENOENT"
@@ -262,18 +258,16 @@ class Hikaru
     siteJsonPath = path.join(@site["workDir"], "package.json")
     if not fse.existsSync(siteJsonPath)
       return
-    modules = JSON.parse(await fse.readFile(siteJsonPath))["dependencies"]
+    modules = JSON.parse(fse.readFileSync(siteJsonPath, "utf8"))["dependencies"]
     if not modules?
       return
     return Object.keys(modules).filter((name) ->
       return /^hikaru-/.test(name)
     ).map((name) =>
       @logger.debug("Hikaru is loading plugin `#{colors.cyan(name)}`...")
-      return require(require.resolve(name, {"paths": [
-        @site["workDir"],
-        ".",
-        __dirname
-      ]}))(this)
+      return require(require.resolve(name, {
+        "paths": [@site["workDir"], ".", __dirname]
+      }))(this)
     )
 
   # Load local scripts for site and theme.
@@ -293,11 +287,9 @@ class Hikaru
       @logger.debug("Hikaru is loading script `#{
         colors.cyan(path.basename(name))
       }`...")
-      return require(require.resolve(name, {"paths": [
-        @site["workDir"],
-        ".",
-        __dirname
-      ]}))(this)
+      return require(require.resolve(name, {
+        "paths": [@site["workDir"], ".", __dirname]
+      }))(this)
     )
 
   registerInternalRenderers: () =>

@@ -235,7 +235,7 @@
       for (j = 0, len = ref.length; j < len; j++) {
         f = ref[j];
         key = this.getPath(f["docPath"]);
-        this.logger.debug(`Hikaru is building route \`${colors.cyan(key)}\`...`);
+        this.logger.debug(`Hikaru is serving \`${colors.cyan(key)}\`...`);
         results.push(this._[key] = f);
       }
       return results;

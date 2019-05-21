@@ -180,7 +180,7 @@ class Router
     for f in @site["assets"].concat(@site["posts"])
     .concat(@site["pages"]).concat(@site["files"])
       key = @getPath(f["docPath"])
-      @logger.debug("Hikaru is building route `#{colors.cyan(key)}`...")
+      @logger.debug("Hikaru is serving `#{colors.cyan(key)}`...")
       @_[key] = f
 
   watchAll: () =>
