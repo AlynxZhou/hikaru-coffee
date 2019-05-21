@@ -1,0 +1,4 @@
+srcs/
+docs/
+Cakefile
+package-lock.json
