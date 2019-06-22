@@ -34,11 +34,11 @@ class Translator
         res = res[k]
       if typeof(res) is "string"
         if args.length > 0
-          return format(res, args)
+          return format(res, args...)
         else
           return res
       if args.length > 0
-        return format(key, args)
+        return format(key, args...)
       else
         return key
 
