@@ -7,7 +7,6 @@ class Processor
     @logger = logger
     @_ = {}
 
-  # fn: param p, posts, ctx, return Promise
   register: (layout, fn) =>
     if fn not instanceof Function
       throw new TypeError("fn must be a Function!")
@@ -22,15 +21,15 @@ class Processor
       @_[layout] = []
     @_[layout].push(fn)
 
-  process: (p, posts, ctx) =>
+  process: (p) =>
     @logger.debug(
       "Hikaru is processing `#{colors.cyan(p["docPath"])}`..."
     )
-    if p["layout"] of @_
-      results = []
-      for fn in @_[p["layout"]]
-        p = await fn(p, posts, ctx)
+    key = p["layout"] or p["type"]
+    if key of @_
+      for fn in @_[key]
+        p = await fn(p)
       return p
-    return Object.assign(new File(), p, ctx)
+    return p
 
 module.exports = Processor

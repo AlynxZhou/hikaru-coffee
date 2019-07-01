@@ -13,9 +13,9 @@ class Site
       "siteConfig": {},
       "themeConfig": {},
       "templates": {},
-      "assets": [],
-      "pages": [],
       "posts": [],
+      "pages": [],
+      "assets": [],
       "files": [],
       "categories": [],
       # Flattened categories length.
@@ -32,7 +32,7 @@ class Site
         "get": () => return @get(key),
         "set": (value) => @set(key, value)
       })
-
+    
   get: (key) =>
     if typeof(key) isnt "string" or key not of @_
       throw new TypeError("key must be a string in #{Object.keys(@_)}!")
@@ -60,25 +60,22 @@ class Site
 
   del: (key, file) =>
     if not key? or not file?
-      return null
-    i = @_[key].findIndex((element) ->
-      return element["docPath"] is file["docPath"] and
-      element["docDir"] is file["docDir"]
-    )
-    if i isnt -1
-      return @_[key].splice(i, 1)
-    else
-      return null
+      return
+    for i in [0...@_[key].length]
+      if @_[key][i]["srcPath"] is file["srcPath"] and
+      @_[key][i]["srcDir"] is file["srcDir"]
+        @_[key].splice(i, 1)
 
   raw: () =>
     return @_
 
 class File
   constructor: (docDir, srcDir, srcPath) ->
-    @docDir = docDir
-    @docPath = null
     @srcDir = srcDir
     @srcPath = srcPath
+    @docDir = docDir
+    @docPath = null
+    @isBinary = false
     @createdTime = null
     @updatedTime = null
     @zone = null
@@ -102,6 +99,8 @@ class File
     @pageIndex = null
     @next = null
     @prev = null
+    if docDir instanceof Object
+      Object.assign(this, docDir)
 
 class Category
   constructor: (name, posts = [], subs = []) ->

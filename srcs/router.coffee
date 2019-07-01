@@ -38,19 +38,13 @@ class Router
     @getPath = getPathFn(@site["siteConfig"]["rootDir"])
     moment.locale(@site["siteConfig"]["language"])
 
-  readFile: (file) ->
-    raw = await fse.readFile(path.join(file["srcDir"], file["srcPath"]))
-    # Auto detect if a file is a binary file or a UTF-8 encoding text file.
-    if raw.equals(Buffer.from(raw.toString("utf8"), "utf8"))
-      raw = raw.toString("utf8")
-    file["text"] = raw
-    file["raw"] = raw
-    return file
+  read: (path) ->
+    return fse.readFile(path)
 
-  writeFile: (file) ->
-    if file["content"] isnt file["raw"]
+  write: (content, file) ->
+    if not file["isBinary"]
       return fse.outputFile(
-        path.join(file["docDir"], file["docPath"]), file["content"]
+        path.join(file["docDir"], file["docPath"]), content
       )
     return fse.copy(
       path.join(file["srcDir"], file["srcPath"]),
@@ -61,124 +55,98 @@ class Router
     @logger.debug("Hikaru is reading `#{colors.cyan(
       path.join(file["srcDir"], file["srcPath"])
     )}`...")
-    file = await @readFile(file)
-    if file["srcDir"] is @site["siteConfig"]["themeSrcDir"]
-      file = await @renderer.render(file)
-      if path.dirname(file["srcPath"]) isnt "."
-        file["type"] = "asset"
-        @site.put("assets", file)
-      else
-        file["type"] = "template"
+    raw = await @read(path.join(file["srcDir"], file["srcPath"]))
+    # Auto detect if a file is a binary file or a UTF-8 encoding text file.
+    if raw.equals(Buffer.from(raw.toString("utf8"), "utf8"))
+      raw = raw.toString("utf8")
+      file["isBinary"] = false
+    else
+      file["isBinary"] = true
+    file["raw"] = raw
+    file["text"] = raw
+    file = parseFrontMatter(file)
+    results = await Promise.all(@renderer.render(file))
+    for result in results
+      if result["content"] instanceof Function
+        result["type"] = "template"
         @site["templates"][path.basename(
-          file["srcPath"], path.extname(file["srcPath"])
-        )] = file
-    else if file["srcDir"] is @site["siteConfig"]["srcDir"]
-      file = parseFrontMatter(file)
-      file = await @renderer.render(file)
-      if file["text"] isnt file["raw"]
-        if file["layout"] is "post"
-          file["type"] = "post"
-          @site.put("posts", file)
-        else
-          file["layout"] = file["layout"] or "page"
-          file["type"] = "page"
-          @site.put("pages", file)
+          result["srcPath"], path.extname(result["srcPath"])
+        )] = result["content"]
+      else if result["layout"] is "post"
+        result["type"] = "post"
+        @site.put("posts", result)
+      else if result["layout"]?
+        result["type"] = "page"
+        @site.put("pages", result)
       else
-        file["type"] = "asset"
-        @site.put("assets", file)
-    return file
+        result["type"] = "asset"
+        @site.put("assets", result)
 
   saveFile: (file) =>
     @logger.debug("Hikaru is writing `#{colors.cyan(
       path.join(file["docDir"], file["docPath"])
     )}`...")
-    return @writeFile(file)
+    if file["layout"]?
+      layout = file["layout"]
+      if layout not of @site["templates"]
+        layout = "page"
+      lang = file["language"] or @site["siteConfig"]["language"]
+      if lang not of @translator.list()
+        try
+          language = yaml.safeLoad(fse.readFileSync(path.join(
+            @site["siteConfig"]["themeDir"],
+            "languages",
+            "#{lang}.yml"
+          )))
+          @translator.register(lang, language)
+        catch err
+          if err["code"] is "ENOENT"
+            @logger.warn(
+              "Hikaru cannot find `#{lang}` language file in your theme."
+            )
+      @write(
+        await @site["templates"][layout](Object.assign(new File(), file, {
+          "site": @site,
+          "siteConfig": @site["siteConfig"],
+          "themeConfig": @site["themeConfig"],
+          "moment": moment,
+          "getVersion": getVersion,
+          "getURL": @getURL,
+          "getPath": @getPath,
+          "isCurrentPath": isCurrentPathFn(
+            @site["siteConfig"]["rootDir"], file["docPath"]
+          ),
+          "__": @translator.getTranslateFn(lang)
+        }))
+        file
+      )
+    else
+      @write(file["content"], file)
 
-  processFile: (f) =>
-    lang = f["language"] or @site["siteConfig"]["language"]
-    if lang not of @translator.list()
-      try
-        language = yaml.safeLoad(fse.readFileSync(path.join(
-          @site["siteConfig"]["themeDir"],
-          "languages",
-          "#{lang}.yml"
-        )))
-        @translator.register(lang, language)
-      catch err
-        if err["code"] is "ENOENT"
-          @logger.warn(
-            "Hikaru cannot find `#{lang}` language file in your theme."
-          )
-    fs = await @processor.process(f, @site["posts"], {
-      "site": @site.raw(),
-      "siteConfig": @site["siteConfig"],
-      "themeConfig": @site["themeConfig"],
-      "moment": moment,
-      "getVersion": getVersion,
-      "getURL": @getURL,
-      "getPath": @getPath,
-      "isCurrentPath": isCurrentPathFn(
-        @site["siteConfig"]["rootDir"], f["docPath"]
-      ),
-      "__": @translator.getTranslateFn(lang)
-    })
-    if fs not instanceof Array
-      return [fs]
-    return fs
+  processFile: (file) =>
+    return @processor.process(file)
 
   processPosts: () =>
     @site["posts"].sort((a, b) ->
-      return -(a["date"] - b["date"])
+      return -(a["createdTime"] - b["createdTime"])
     )
-    processed = []
-    for ps in @site["posts"]
-      ps = await @processFile(ps)
-      processed = processed.concat(ps)
-    @site["posts"] = processed
     for i in [0...@site["posts"].length]
       if i > 0
         @site["posts"][i]["next"] = @site["posts"][i - 1]
       if i < @site["posts"].length - 1
         @site["posts"][i]["prev"] = @site["posts"][i + 1]
+    return Promise.all(@site["posts"].map((p) =>
+      return @processFile(p)
+    ))
 
   processPages: () =>
-    for ps in @site["pages"]
-      ps = await @processFile(ps)
-      for p in ps
-        @site.put("pages", p)
+    return Promise.all(@site["pages"].map((p) =>
+      return @processFile(p)
+    ))
 
-  saveAssets: () =>
-    return @site["assets"].map((asset) =>
-      @saveFile(asset)
-      return asset
-    )
-
-  savePosts: () =>
-    return @site["posts"].map((p) =>
-      p["content"] = await @site["templates"][p["layout"]]["content"](p)
-      @saveFile(p)
-      return p
-    )
-
-  savePages: () =>
-    return @site["pages"].map((p) =>
-      if p["layout"] not of @site["templates"]
-        p["layout"] = "page"
-      p["content"] = await @site["templates"][p["layout"]]["content"](p)
-      @saveFile(p)
-      return p
-    )
-
-  saveFiles: () =>
-    return @site["files"].map((file) =>
-      @saveFile(file)
-      return file
-    )
-
-  buildServerRoutes: () =>
+  buildServerRoutes: (allFiles) =>
     @_ = {}
-    for f in @site["assets"].concat(@site["posts"])
-    .concat(@site["pages"]).concat(@site["files"])
+    for f in allFiles
       key = @getPath(f["docPath"])
       @logger.debug("Hikaru is serving `#{colors.cyan(key)}`...")
       @_[key] = f
@@ -221,29 +189,19 @@ class Router
     if not @watchedEvents.length or @handling
       return
     @handling = true
-    @site["pages"] = @sourcePages
     while (e = @watchedEvents.shift())?
       file = new File(@site["siteConfig"]["docDir"], e["srcDir"], e["srcPath"])
       if e["type"] is "unlink"
         for key in ["assets", "pages", "posts"]
-          if @site.del(key, file)?
-            break
+          @site.del(key, file)
       else
         file = await @loadFile(file)
-        # Templates or assets have relations. Need to reload all of them.
-        if file["type"] is "template"
-          for k, v of @site["templates"]
-            @site["templates"][k] = await @renderer.render(v)
-        else if file["type"] is "asset"
-          @site["assets"] = await Promise.all(@site["assets"].map((file) =>
-            return @renderer.render(file)
-          ))
-    @sourcePages = [@site["pages"]...]
-    @site = await @generator.generate("beforeProcessing", @site)
-    await @processPosts()
-    await @processPages()
-    @site = await @generator.generate("afterProcessing", @site)
-    @buildServerRoutes()
+    @site["posts"] = await @processPosts()
+    @site["pages"] = await @processPages()
+    @site["files"] = await @generator.generate(@site)
+    allFiles = @site["assets"].concat(@site["posts"])
+    .concat(@site["pages"]).concat(@site["files"])
+    @buildServerRoutes(allFiles)
     @handling = false
 
   listen: (ip, port) =>
@@ -287,7 +245,7 @@ class Router
         if res["layout"] not of @site["templates"]
           res["layout"] = "page"
         response.write(
-          await @site["templates"][res["layout"]]["content"](res)
+          await @site["templates"][res["layout"]](res)
         )
       else
         response.write(res["content"])
@@ -332,14 +290,12 @@ class Router
       )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @saveAssets()
-    @site = await @generator.generate("beforeProcessing", @site)
-    await @processPosts()
-    await @processPages()
-    @site = await @generator.generate("afterProcessing", @site)
-    @savePosts()
-    @savePages()
-    @saveFiles()
+    @site["posts"] = await @processPosts()
+    @site["pages"] = await @processPages()
+    @site["files"] = await @generator.generate(@site)
+    allFiles = @site["assets"].concat(@site["posts"])
+    .concat(@site["pages"]).concat(@site["files"])
+    allFiles.map(@saveFile)
 
   serve: (ip, port) =>
     allFiles = (await matchFiles(path.join("**", "*"), {
@@ -364,12 +320,14 @@ class Router
       )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @sourcePages = [@site["pages"]...]
-    @site = await @generator.generate("beforeProcessing", @site)
-    await @processPosts()
-    await @processPages()
-    @site = await @generator.generate("afterProcessing", @site)
-    @buildServerRoutes()
+    @site["posts"] = await @processPosts()
+    @site["pages"] = await @processPages()
+    @site["files"] = await @generator.generate(@site)
+    allFiles = @site["assets"].concat(@site["posts"])
+    .concat(@site["pages"]).concat(@site["files"])
+    allFiles = @site["assets"].concat(@site["posts"])
+    .concat(@site["pages"]).concat(@site["files"])
+    @buildServerRoutes(allFiles)
     @listen(ip, port)
 
 module.exports = Router

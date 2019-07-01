@@ -255,6 +255,7 @@ class Hikaru
 
   # Load local plugins for site.
   loadPlugins: () =>
+    return
     siteJsonPath = path.join(@site["workDir"], "package.json")
     if not fse.existsSync(siteJsonPath)
       return
@@ -297,9 +298,9 @@ class Hikaru
       {"autoescape": false, "noCache": true}, @site["siteConfig"]["nunjucks"]
     )
     njkEnv = nunjucks.configure(@site["siteConfig"]["themeSrcDir"], njkConfig)
-    @renderer.register([".njk", ".j2"], null, (file, ctx) ->
+    njkRenderer = (file) ->
       template = nunjucks.compile(file["text"], njkEnv, file["srcPath"])
-      # For template you must give a async render function as content.
+      # For template you must give a render function as content.
       file["content"] = (ctx) ->
         return new Promise((resolve, reject) ->
           template.render(ctx, (err, res) ->
@@ -309,9 +310,10 @@ class Hikaru
           )
         )
       return file
-    )
+    @renderer.register(".njk", null, njkRenderer)
+    @renderer.register(".j2", null, njkRenderer)
 
-    @renderer.register(".html", ".html", (file, ctx) ->
+    @renderer.register(".html", ".html", (file) ->
       file["content"] = file["text"]
       return file
     )
@@ -327,13 +329,13 @@ class Hikaru
         }, @site["siteConfig"]["highlight"]))
     }, @site["siteConfig"]["marked"])
     marked.setOptions(markedConfig)
-    @renderer.register(".md", ".html", (file, ctx) ->
+    @renderer.register(".md", ".html", (file) ->
       file["content"] = marked(file["text"])
       return file
     )
 
     stylConfig = @site["siteConfig"]["stylus"] or {}
-    @renderer.register(".styl", ".css", (file, ctx) =>
+    @renderer.register(".styl", ".css", (file) =>
       return new Promise((resolve, reject) =>
         stylus(file["text"])
         .use(nib())
@@ -372,37 +374,37 @@ class Hikaru
     )
 
   registerInternalProcessors: () =>
-    @processor.register("index", (p, posts, ctx) =>
-      posts.sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
-      if @site["siteConfig"]["perPage"] instanceof Object
-        perPage = @site["siteConfig"]["perPage"]["index"] or 10
-      else
-        perPage = @site["siteConfig"]["perPage"] or 10
-      return paginate(p, posts, perPage, ctx)
-    )
-
-    @processor.register("archives", (p, posts, ctx) =>
-      posts.sort((a, b) ->
-        return -(a["date"] - b["date"])
-      )
-      if @site["siteConfig"]["perPage"] instanceof Object
-        perPage = @site["siteConfig"]["perPage"]["archives"] or 10
-      else
-        perPage = @site["siteConfig"]["perPage"] or 10
-      return paginate(p, posts, perPage, ctx)
-    )
-
-    @processor.register("categories", (p, posts, ctx) =>
-      return Object.assign(new File(), p, ctx, {
-        "categories": @site["categories"]
-      })
-    )
-
-    @processor.register("tags", (p, posts, ctx) =>
-      return Object.assign(new File(), p, ctx, {"tags": @site["tags"]})
-    )
+    # @processor.register("index", (p, posts, ctx) =>
+    #   posts.sort((a, b) ->
+    #     return -(a["date"] - b["date"])
+    #   )
+    #   if @site["siteConfig"]["perPage"] instanceof Object
+    #     perPage = @site["siteConfig"]["perPage"]["index"] or 10
+    #   else
+    #     perPage = @site["siteConfig"]["perPage"] or 10
+    #   return paginate(p, posts, perPage, ctx)
+    # )
+    #
+    # @processor.register("archives", (p, posts, ctx) =>
+    #   posts.sort((a, b) ->
+    #     return -(a["date"] - b["date"])
+    #   )
+    #   if @site["siteConfig"]["perPage"] instanceof Object
+    #     perPage = @site["siteConfig"]["perPage"]["archives"] or 10
+    #   else
+    #     perPage = @site["siteConfig"]["perPage"] or 10
+    #   return paginate(p, posts, perPage, ctx)
+    # )
+    #
+    # @processor.register("categories", (p, posts, ctx) =>
+    #   return Object.assign(new File(), p, ctx, {
+    #     "categories": @site["categories"]
+    #   })
+    # )
+    #
+    # @processor.register("tags", (p, posts, ctx) =>
+    #   return Object.assign(new File(), p, ctx, {"tags": @site["tags"]})
+    # )
 
     @processor.register(["post", "page"], (p, posts, ctx) =>
       # Preventing cheerio decode `&lt;`.
@@ -430,99 +432,100 @@ class Hikaru
       )
     )
 
+  # TODO: Rewrite generators.
   registerInternalGenerators: () =>
-    @generator.register("beforeProcessing", (site) ->
-      # Generate categories
-      categories = []
-      categoriesLength = 0
-      for post in site["posts"]
-        if not post["frontMatter"]["categories"]?
-          continue
-        postCategories = []
-        subCategories = categories
-        for cateName in post["frontMatter"]["categories"]
-          found = false
-          for category in subCategories
-            if category["name"] is cateName
-              found = true
-              postCategories.push(category)
-              category["posts"].push(post)
-              subCategories = category["subs"]
-              break
-          if not found
-            newCate = new Category(cateName, [post], [])
-            ++categoriesLength
-            postCategories.push(newCate)
-            subCategories.push(newCate)
-            subCategories = newCate["subs"]
-        post["categories"] = postCategories
-      categories.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      if site["siteConfig"]["perPage"] instanceof Object
-        perPage = site["siteConfig"]["perPage"]["category"] or 10
-      else
-        perPage = site["siteConfig"]["perPage"] or 10
-      for sub in categories
-        sortCategories(sub)
-        for p in paginateCategories(
-          sub, site["siteConfig"]["categoryDir"], perPage, site
-        )
-          site.put("pages", p)
-      site["categories"] = categories
-      site["categoriesLength"] = categoriesLength
-      return site
-    )
-
-    @generator.register("beforeProcessing", (site) ->
-      # Generate tags.
-      tags = []
-      tagsLength = 0
-      for post in site["posts"]
-        if not post["frontMatter"]["tags"]?
-          continue
-        postTags = []
-        for tagName in post["frontMatter"]["tags"]
-          found = false
-          for tag in tags
-            if tag["name"] is tagName
-              found = true
-              postTags.push(tag)
-              tag["posts"].push(post)
-              break
-          if not found
-            newTag = new Tag(tagName, [post])
-            ++tagsLength
-            postTags.push(newTag)
-            tags.push(newTag)
-        post["tags"] = postTags
-      tags.sort((a, b) ->
-        return a["name"].localeCompare(b["name"])
-      )
-      if site["siteConfig"]["perPage"] instanceof Object
-        perPage = site["siteConfig"]["perPage"]["tag"] or 10
-      else
-        perPage = site["siteConfig"]["perPage"] or 10
-      for tag in tags
-        tag["posts"].sort((a, b) ->
-          return -(a["date"] - b["date"])
-        )
-        sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
-          "layout": "tag",
-          "docPath": path.join(
-            site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
-          ),
-          "title": "tag",
-          "name": tag["name"].toString(),
-          "comment": false,
-          "reward": false
-        })
-        tag["docPath"] = sp["docPath"]
-        for p in paginate(sp, tag["posts"], perPage)
-          site.put("pages", p)
-      site["tags"] = tags
-      site["tagsLength"] = tagsLength
-      return site
-    )
+    # @generator.register("beforeProcessing", (site) ->
+    #   # Generate categories
+    #   categories = []
+    #   categoriesLength = 0
+    #   for post in site["posts"]
+    #     if not post["frontMatter"]["categories"]?
+    #       continue
+    #     postCategories = []
+    #     subCategories = categories
+    #     for cateName in post["frontMatter"]["categories"]
+    #       found = false
+    #       for category in subCategories
+    #         if category["name"] is cateName
+    #           found = true
+    #           postCategories.push(category)
+    #           category["posts"].push(post)
+    #           subCategories = category["subs"]
+    #           break
+    #       if not found
+    #         newCate = new Category(cateName, [post], [])
+    #         ++categoriesLength
+    #         postCategories.push(newCate)
+    #         subCategories.push(newCate)
+    #         subCategories = newCate["subs"]
+    #     post["categories"] = postCategories
+    #   categories.sort((a, b) ->
+    #     return a["name"].localeCompare(b["name"])
+    #   )
+    #   if site["siteConfig"]["perPage"] instanceof Object
+    #     perPage = site["siteConfig"]["perPage"]["category"] or 10
+    #   else
+    #     perPage = site["siteConfig"]["perPage"] or 10
+    #   for sub in categories
+    #     sortCategories(sub)
+    #     for p in paginateCategories(
+    #       sub, site["siteConfig"]["categoryDir"], perPage, site
+    #     )
+    #       site.put("pages", p)
+    #   site["categories"] = categories
+    #   site["categoriesLength"] = categoriesLength
+    #   return site
+    # )
+    #
+    # @generator.register("beforeProcessing", (site) ->
+    #   # Generate tags.
+    #   tags = []
+    #   tagsLength = 0
+    #   for post in site["posts"]
+    #     if not post["frontMatter"]["tags"]?
+    #       continue
+    #     postTags = []
+    #     for tagName in post["frontMatter"]["tags"]
+    #       found = false
+    #       for tag in tags
+    #         if tag["name"] is tagName
+    #           found = true
+    #           postTags.push(tag)
+    #           tag["posts"].push(post)
+    #           break
+    #       if not found
+    #         newTag = new Tag(tagName, [post])
+    #         ++tagsLength
+    #         postTags.push(newTag)
+    #         tags.push(newTag)
+    #     post["tags"] = postTags
+    #   tags.sort((a, b) ->
+    #     return a["name"].localeCompare(b["name"])
+    #   )
+    #   if site["siteConfig"]["perPage"] instanceof Object
+    #     perPage = site["siteConfig"]["perPage"]["tag"] or 10
+    #   else
+    #     perPage = site["siteConfig"]["perPage"] or 10
+    #   for tag in tags
+    #     tag["posts"].sort((a, b) ->
+    #       return -(a["date"] - b["date"])
+    #     )
+    #     sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
+    #       "layout": "tag",
+    #       "docPath": path.join(
+    #         site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
+    #       ),
+    #       "title": "tag",
+    #       "name": tag["name"].toString(),
+    #       "comment": false,
+    #       "reward": false
+    #     })
+    #     tag["docPath"] = sp["docPath"]
+    #     for p in paginate(sp, tag["posts"], perPage)
+    #       site.put("pages", p)
+    #   site["tags"] = tags
+    #   site["tagsLength"] = tagsLength
+    #   return site
+    # )
 
 module.exports = Hikaru
