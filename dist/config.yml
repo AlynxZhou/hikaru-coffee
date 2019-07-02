@@ -10,6 +10,9 @@ rootDir: /
 srcDir: srcs
 docDir: docs
 themeDir: aria
+
+indexDir: /
+archiveDir: archives
 categoryDir: categories
 tagDir: tags
 
