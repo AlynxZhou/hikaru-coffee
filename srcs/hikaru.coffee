@@ -434,98 +434,92 @@ class Hikaru
 
   # TODO: Rewrite generators.
   registerInternalGenerators: () =>
-    # @generator.register("beforeProcessing", (site) ->
-    #   # Generate categories
-    #   categories = []
-    #   categoriesLength = 0
-    #   for post in site["posts"]
-    #     if not post["frontMatter"]["categories"]?
-    #       continue
-    #     postCategories = []
-    #     subCategories = categories
-    #     for cateName in post["frontMatter"]["categories"]
-    #       found = false
-    #       for category in subCategories
-    #         if category["name"] is cateName
-    #           found = true
-    #           postCategories.push(category)
-    #           category["posts"].push(post)
-    #           subCategories = category["subs"]
-    #           break
-    #       if not found
-    #         newCate = new Category(cateName, [post], [])
-    #         ++categoriesLength
-    #         postCategories.push(newCate)
-    #         subCategories.push(newCate)
-    #         subCategories = newCate["subs"]
-    #     post["categories"] = postCategories
-    #   categories.sort((a, b) ->
-    #     return a["name"].localeCompare(b["name"])
-    #   )
-    #   if site["siteConfig"]["perPage"] instanceof Object
-    #     perPage = site["siteConfig"]["perPage"]["category"] or 10
-    #   else
-    #     perPage = site["siteConfig"]["perPage"] or 10
-    #   for sub in categories
-    #     sortCategories(sub)
-    #     for p in paginateCategories(
-    #       sub, site["siteConfig"]["categoryDir"], perPage, site
-    #     )
-    #       site.put("pages", p)
-    #   site["categories"] = categories
-    #   site["categoriesLength"] = categoriesLength
-    #   return site
-    # )
-    #
-    # @generator.register("beforeProcessing", (site) ->
-    #   # Generate tags.
-    #   tags = []
-    #   tagsLength = 0
-    #   for post in site["posts"]
-    #     if not post["frontMatter"]["tags"]?
-    #       continue
-    #     postTags = []
-    #     for tagName in post["frontMatter"]["tags"]
-    #       found = false
-    #       for tag in tags
-    #         if tag["name"] is tagName
-    #           found = true
-    #           postTags.push(tag)
-    #           tag["posts"].push(post)
-    #           break
-    #       if not found
-    #         newTag = new Tag(tagName, [post])
-    #         ++tagsLength
-    #         postTags.push(newTag)
-    #         tags.push(newTag)
-    #     post["tags"] = postTags
-    #   tags.sort((a, b) ->
-    #     return a["name"].localeCompare(b["name"])
-    #   )
-    #   if site["siteConfig"]["perPage"] instanceof Object
-    #     perPage = site["siteConfig"]["perPage"]["tag"] or 10
-    #   else
-    #     perPage = site["siteConfig"]["perPage"] or 10
-    #   for tag in tags
-    #     tag["posts"].sort((a, b) ->
-    #       return -(a["date"] - b["date"])
-    #     )
-    #     sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
-    #       "layout": "tag",
-    #       "docPath": path.join(
-    #         site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
-    #       ),
-    #       "title": "tag",
-    #       "name": tag["name"].toString(),
-    #       "comment": false,
-    #       "reward": false
-    #     })
-    #     tag["docPath"] = sp["docPath"]
-    #     for p in paginate(sp, tag["posts"], perPage)
-    #       site.put("pages", p)
-    #   site["tags"] = tags
-    #   site["tagsLength"] = tagsLength
-    #   return site
-    # )
+    @generator.register((site) ->
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["index"] or 10
+      else
+        perPage = site["siteConfig"]["perPage"] or 10
+      return paginate(new File({
+        "layout": "index",
+        "docDir": site["siteConfig"]["docDir"],
+        "docPath": path.join(site["siteConfig"]["indexDir"], "index.html"),
+        "title": "index",
+        "comment": false,
+        "reward": false
+      }), site["posts"], perPage)
+    )
+
+    @generator.register((site) ->
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["archives"] or 10
+      else
+        perPage = site["siteConfig"]["perPage"] or 10
+      return paginate(new File({
+        "layout": "archives",
+        "docDir": site["siteConfig"]["docDir"],
+        "docPath": path.join(site["siteConfig"]["archiveDir"], "index.html"),
+        "title": "archives",
+        "comment": false,
+        "reward": false
+      }), site["posts"], perPage)
+    )
+
+    @generator.register((site) ->
+      results = []
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["category"] or 10
+      else
+        perPage = site["siteConfig"]["perPage"] or 10
+      for sub in site["categories"]
+        sortCategories(sub)
+        for p in paginateCategories(
+          sub, site["siteConfig"]["categoryDir"], perPage, site
+        )
+          results.push(p)
+      results.push(new File({
+        "layout": "categories",
+        "docDir": site["siteConfig"]["docDir"],
+        "docPath": path.join(site["siteConfig"]["categoryDir"], "index.html"),
+        "title": "categories",
+        "comment": false,
+        "reward": false
+      }))
+      return results
+    )
+
+    @generator.register((site) ->
+      results = []
+      if site["siteConfig"]["perPage"] instanceof Object
+        perPage = site["siteConfig"]["perPage"]["tag"] or 10
+      else
+        perPage = site["siteConfig"]["perPage"] or 10
+      for tag in site["tags"]
+        tag["posts"].sort((a, b) ->
+          return -(a["date"] - b["date"])
+        )
+        sp = new File({
+          "layout": "tag",
+          "docDir": site["siteConfig"]["docDir"],
+          "docPath": path.join(
+            site["siteConfig"]["tagDir"], "#{tag["name"]}", "index.html"
+          ),
+          "title": "tag",
+          "name": tag["name"].toString(),
+          "comment": false,
+          "reward": false
+        })
+        tag["docPath"] = sp["docPath"]
+        for p in paginate(sp, tag["posts"], perPage)
+          results.push(p)
+      results.push(new File({
+        "layout": "tags",
+        "docDir": site["siteConfig"]["docDir"],
+        "docPath": path.join(site["siteConfig"]["tagDir"], "index.html"),
+        "title": "tags",
+        "comment": false,
+        "reward": false
+      }))
+      return results
+    )
 
 module.exports = Hikaru

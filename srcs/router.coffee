@@ -15,6 +15,8 @@ Promise = require("bluebird")
   getPathFn,
   getURLFn,
   getContentType,
+  genCategories,
+  genTags,
   isCurrentPathFn,
   parseFrontMatter
 } = require("./utils")
@@ -135,6 +137,12 @@ class Router
         @site["posts"][i]["next"] = @site["posts"][i - 1]
       if i < @site["posts"].length - 1
         @site["posts"][i]["prev"] = @site["posts"][i + 1]
+    result = genCategories(@site["posts"])
+    @site["categories"] = result["categories"]
+    @site["categoriesLength"] = result["categoriesLength"]
+    result = genTags(@site["posts"])
+    @site["tags"] = result["tags"]
+    @site["tagsLength"] = result["tagsLength"]
     return Promise.all(@site["posts"].map((p) =>
       return @processFile(p)
     ))

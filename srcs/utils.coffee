@@ -82,7 +82,7 @@ parseFrontMatter = (file) ->
 getContentType = (docPath) ->
   return extMIME[path.extname(docPath)] or "application/octet-stream"
 
-paginate = (p, posts, perPage = 10, ctx = {}) ->
+paginate = (p, posts, perPage = 10) ->
   if perPage instanceof Object
     ctx = perPage
     perPage = 10
@@ -90,10 +90,10 @@ paginate = (p, posts, perPage = 10, ctx = {}) ->
   perPagePosts = []
   for post in posts
     if perPagePosts.length is perPage
-      results.push(Object.assign(new File(), p, ctx, {"posts": perPagePosts}))
+      results.push(Object.assign(new File(), p, {"posts": perPagePosts}))
       perPagePosts = []
     perPagePosts.push(post)
-  results.push(Object.assign(new File(), p, ctx, {"posts": perPagePosts}))
+  results.push(Object.assign(new File(), p, {"posts": perPagePosts}))
   results[0]["pageArray"] = results
   results[0]["pageIndex"] = 0
   results[0]["docPath"] = p["docPath"]
@@ -123,8 +123,9 @@ paginateCategories = (category, parentPath, perPage = 10, site) ->
     site = perPage
     perPage = 10
   results = []
-  sp = Object.assign(new File(site["siteConfig"]["docDir"]), {
+  sp = new File({
     "layout": "category",
+    "docDir": site["siteConfig"]["docDir"],
     "docPath": path.join(parentPath, "#{category["name"]}", "index.html"),
     "title": "category",
     "name": category["name"].toString(),
@@ -180,6 +181,61 @@ isCurrentPathFn = (rootDir = path.posix.sep, currentPath = "") ->
       if testToken[i] isnt currentToken[i]
         return false
     return true
+
+genCategories = (posts) ->
+  categories = []
+  categoriesLength = 0
+  for post in posts
+    if not post["frontMatter"]["categories"]?
+      continue
+    postCategories = []
+    subCategories = categories
+    for cateName in post["frontMatter"]["categories"]
+      found = false
+      for category in subCategories
+        if category["name"] is cateName
+          found = true
+          postCategories.push(category)
+          category["posts"].push(post)
+          subCategories = category["subs"]
+          break
+      if not found
+        newCate = new Category(cateName, [post], [])
+        ++categoriesLength
+        postCategories.push(newCate)
+        subCategories.push(newCate)
+        subCategories = newCate["subs"]
+    post["categories"] = postCategories
+  categories.sort((a, b) ->
+    return a["name"].localeCompare(b["name"])
+  )
+  return {"categories": categories, "categoriesLength": categoriesLength}
+
+genTags = (posts) ->
+  tags = []
+  tagsLength = 0
+  for post in posts
+    if not post["frontMatter"]["tags"]?
+      continue
+    postTags = []
+    for tagName in post["frontMatter"]["tags"]
+      found = false
+      for tag in tags
+        if tag["name"] is tagName
+          found = true
+          postTags.push(tag)
+          tag["posts"].push(post)
+          break
+      if not found
+        newTag = new Tag(tagName, [post])
+        ++tagsLength
+        postTags.push(newTag)
+        tags.push(newTag)
+    post["tags"] = postTags
+  tags.sort((a, b) ->
+    return a["name"].localeCompare(b["name"])
+  )
+  return {"tags": tags, "tagsLength": tagsLength}
 
 resolveHeaderIds = ($) ->
   hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
@@ -269,6 +325,8 @@ module.exports = {
   "paginateCategories": paginateCategories,
   "getPathFn": getPathFn,
   "getURLFn": getURLFn,
+  "genCategories": genCategories,
+  "genTags": genTags,
   "isCurrentPathFn": isCurrentPathFn,
   "resolveHeaderIds": resolveHeaderIds,
   "resolveLink": resolveLink,

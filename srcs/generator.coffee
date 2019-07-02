@@ -15,9 +15,14 @@ class Generator
   generate: (site) =>
     results = []
     for fn in @_
-      file = await fn(site)
-      @logger.debug("Hikaru is generating `#{colors.cyan(file["docPath"])}`...")
-      results.push(file)
+      res = await fn(site)
+      if res not instanceof Array
+        res = [results]
+      for file in res
+        @logger.debug("Hikaru is generating `#{
+          colors.cyan(file["docPath"])
+        }`...")
+        results.push(file)
     return results
 
 module.exports = Generator
