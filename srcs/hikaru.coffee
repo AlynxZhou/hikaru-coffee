@@ -29,6 +29,8 @@ utils = require("./utils")
   paginateCategories,
   getPathFn,
   getURLFn,
+  genCategories,
+  genTags,
   resolveHeaderIds,
   resolveLink,
   resolveImage,
@@ -255,7 +257,6 @@ class Hikaru
 
   # Load local plugins for site.
   loadPlugins: () =>
-    return
     siteJsonPath = path.join(@site["workDir"], "package.json")
     if not fse.existsSync(siteJsonPath)
       return
@@ -374,67 +375,60 @@ class Hikaru
     )
 
   registerInternalProcessors: () =>
-    # @processor.register("index", (p, posts, ctx) =>
-    #   posts.sort((a, b) ->
-    #     return -(a["date"] - b["date"])
-    #   )
-    #   if @site["siteConfig"]["perPage"] instanceof Object
-    #     perPage = @site["siteConfig"]["perPage"]["index"] or 10
-    #   else
-    #     perPage = @site["siteConfig"]["perPage"] or 10
-    #   return paginate(p, posts, perPage, ctx)
-    # )
-    #
-    # @processor.register("archives", (p, posts, ctx) =>
-    #   posts.sort((a, b) ->
-    #     return -(a["date"] - b["date"])
-    #   )
-    #   if @site["siteConfig"]["perPage"] instanceof Object
-    #     perPage = @site["siteConfig"]["perPage"]["archives"] or 10
-    #   else
-    #     perPage = @site["siteConfig"]["perPage"] or 10
-    #   return paginate(p, posts, perPage, ctx)
-    # )
-    #
-    # @processor.register("categories", (p, posts, ctx) =>
-    #   return Object.assign(new File(), p, ctx, {
-    #     "categories": @site["categories"]
-    #   })
-    # )
-    #
-    # @processor.register("tags", (p, posts, ctx) =>
-    #   return Object.assign(new File(), p, ctx, {"tags": @site["tags"]})
-    # )
+    @processor.register("post sequence", (site) ->
+      site["posts"].sort((a, b) ->
+        return -(a["createdTime"] - b["createdTime"])
+      )
+      for i in [0...site["posts"].length]
+        if i > 0
+          site["posts"][i]["next"] = site["posts"][i - 1]
+        if i < site["posts"].length - 1
+          site["posts"][i]["prev"] = site["posts"][i + 1]
+      return site
+    )
 
-    @processor.register(["post", "page"], (p, posts, ctx) =>
+    @processor.register("categories collection", (site) ->
+      result = genCategories(site["posts"])
+      site["categories"] = result["categories"]
+      site["categoriesLength"] = result["categoriesLength"]
+      return site
+    )
+
+    @processor.register("tags collection", (site) ->
+      result = genTags(site["posts"])
+      site["tags"] = result["tags"]
+      site["tagsLength"] = result["tagsLength"]
+      return site
+    )
+
+    @processor.register("toc and link resolving for pages and posts", (site) ->
       # Preventing cheerio decode `&lt;`.
       # Only work with cheerio version less than or equal to `0.22.0`,
       # which uses `htmlparser2` as its parser.
-      $ = cheerio.load(p["content"], {"decodeEntities": false})
-      resolveHeaderIds($)
-      toc = genToc($)
-      resolveLink(
-        $,
-        @site["siteConfig"]["baseURL"],
-        @site["siteConfig"]["rootDir"],
-        p["docPath"]
-      )
-      resolveImage($, @site["siteConfig"]["rootDir"], p["docPath"])
-      # May change after cheerio switching to `parse5`.
-      p["content"] = $.html()
-      if p["content"].indexOf("<!--more-->") isnt -1
-        split = p["content"].split("<!--more-->")
-        p["excerpt"] = split[0]
-        p["more"] = split[1]
-        p["content"] = split.join("<a id=\"more\"></a>")
-      return Object.assign(
-        new File(), p, ctx, {"toc": toc, "$": $}
-      )
+      all = site["posts"].concat(site["pages"])
+      for p in all
+        p["$"] = cheerio.load(p["content"], {"decodeEntities": false})
+        resolveHeaderIds(p["$"])
+        p["toc"] = genToc(p["$"])
+        resolveLink(
+          p["$"],
+          site["siteConfig"]["baseURL"],
+          site["siteConfig"]["rootDir"],
+          p["docPath"]
+        )
+        resolveImage(p["$"], site["siteConfig"]["rootDir"], p["docPath"])
+        # May change after cheerio switching to `parse5`.
+        p["content"] = p["$"].html()
+        if p["content"].indexOf("<!--more-->") isnt -1
+          split = p["content"].split("<!--more-->")
+          p["excerpt"] = split[0]
+          p["more"] = split[1]
+          p["content"] = split.join("<a id=\"more\"></a>")
+        return site
     )
 
-  # TODO: Rewrite generators.
   registerInternalGenerators: () =>
-    @generator.register((site) ->
+    @generator.register("index pages", (site) ->
       if site["siteConfig"]["perPage"] instanceof Object
         perPage = site["siteConfig"]["perPage"]["index"] or 10
       else
@@ -449,7 +443,7 @@ class Hikaru
       }), site["posts"], perPage)
     )
 
-    @generator.register((site) ->
+    @generator.register("archives pages", (site) ->
       if site["siteConfig"]["perPage"] instanceof Object
         perPage = site["siteConfig"]["perPage"]["archives"] or 10
       else
@@ -464,7 +458,7 @@ class Hikaru
       }), site["posts"], perPage)
     )
 
-    @generator.register((site) ->
+    @generator.register("categories pages", (site) ->
       results = []
       if site["siteConfig"]["perPage"] instanceof Object
         perPage = site["siteConfig"]["perPage"]["category"] or 10
@@ -487,7 +481,7 @@ class Hikaru
       return results
     )
 
-    @generator.register((site) ->
+    @generator.register("tags pages", (site) ->
       results = []
       if site["siteConfig"]["perPage"] instanceof Object
         perPage = site["siteConfig"]["perPage"]["tag"] or 10

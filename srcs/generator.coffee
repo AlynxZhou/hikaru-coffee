@@ -6,23 +6,21 @@ class Generator
     @logger = logger
     @_ = []
 
-  register: (fn) =>
+  register: (name, fn) =>
     if fn not instanceof Function
       throw new TypeError("fn must be a Function!")
       return
-    @_.push(fn)
+    @_.push({"name": name, "fn": fn})
 
   generate: (site) =>
     results = []
-    for fn in @_
+    for {name, fn} in @_
+      @logger.debug("Hikaru is generating `#{colors.blue(name)}`...")
       res = await fn(site)
       if res not instanceof Array
-        res = [results]
-      for file in res
-        @logger.debug("Hikaru is generating `#{
-          colors.cyan(file["docPath"])
-        }`...")
-        results.push(file)
+        results.push(res)
+      else
+        results = results.concat(res)
     return results
 
 module.exports = Generator

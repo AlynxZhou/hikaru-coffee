@@ -5,31 +5,18 @@ Promise = require("bluebird")
 class Processor
   constructor: (logger) ->
     @logger = logger
-    @_ = {}
+    @_ = []
 
-  register: (layout, fn) =>
+  register: (name, fn) =>
     if fn not instanceof Function
       throw new TypeError("fn must be a Function!")
       return
-    if layout instanceof Array
-      for l in layout
-        if l not of @_
-          @_[l] = []
-        @_[l].push(fn)
-      return
-    if layout not of @_
-      @_[layout] = []
-    @_[layout].push(fn)
+    @_.push({"name": name, "fn": fn})
 
-  process: (p) =>
-    @logger.debug(
-      "Hikaru is processing `#{colors.cyan(p["docPath"])}`..."
-    )
-    key = p["layout"] or p["type"]
-    if key of @_
-      for fn in @_[key]
-        p = await fn(p)
-      return p
-    return p
+  process: (site) =>
+    for {name, fn} in @_
+      @logger.debug("Hikaru is processing #{colors.blue(name)}...")
+      site = await fn(site)
+    return site
 
 module.exports = Processor

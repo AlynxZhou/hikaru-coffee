@@ -15,8 +15,6 @@ Promise = require("bluebird")
   getPathFn,
   getURLFn,
   getContentType,
-  genCategories,
-  genTags,
   isCurrentPathFn,
   parseFrontMatter
 } = require("./utils")
@@ -92,65 +90,40 @@ class Router
       layout = file["layout"]
       if layout not of @site["templates"]
         layout = "page"
-      lang = file["language"] or @site["siteConfig"]["language"]
-      if lang not of @translator.list()
-        try
-          language = yaml.safeLoad(fse.readFileSync(path.join(
-            @site["siteConfig"]["themeDir"],
-            "languages",
-            "#{lang}.yml"
-          )))
-          @translator.register(lang, language)
-        catch err
-          if err["code"] is "ENOENT"
-            @logger.warn(
-              "Hikaru cannot find `#{lang}` language file in your theme."
-            )
-      @write(
-        await @site["templates"][layout](Object.assign(new File(), file, {
-          "site": @site,
-          "siteConfig": @site["siteConfig"],
-          "themeConfig": @site["themeConfig"],
-          "moment": moment,
-          "getVersion": getVersion,
-          "getURL": @getURL,
-          "getPath": @getPath,
-          "isCurrentPath": isCurrentPathFn(
-            @site["siteConfig"]["rootDir"], file["docPath"]
-          ),
-          "__": @translator.getTranslateFn(lang)
-        }))
-        file
-      )
+      @write(await @site["templates"][layout](@loadContext(file)), file)
     else
       @write(file["content"], file)
 
-  processFile: (file) =>
-    return @processor.process(file)
+  loadLanguage: (file) =>
+    lang = file["language"] or @site["siteConfig"]["language"]
+    if lang not of @translator.list()
+      try
+        language = yaml.safeLoad(fse.readFileSync(path.join(
+          @site["siteConfig"]["themeDir"], "languages", "#{lang}.yml"
+        )))
+        @translator.register(lang, language)
+      catch err
+        if err["code"] is "ENOENT"
+          @logger.warn(
+            "Hikaru cannot find `#{lang}` language file in your theme."
+          )
+    return lang
 
-  processPosts: () =>
-    @site["posts"].sort((a, b) ->
-      return -(a["createdTime"] - b["createdTime"])
-    )
-    for i in [0...@site["posts"].length]
-      if i > 0
-        @site["posts"][i]["next"] = @site["posts"][i - 1]
-      if i < @site["posts"].length - 1
-        @site["posts"][i]["prev"] = @site["posts"][i + 1]
-    result = genCategories(@site["posts"])
-    @site["categories"] = result["categories"]
-    @site["categoriesLength"] = result["categoriesLength"]
-    result = genTags(@site["posts"])
-    @site["tags"] = result["tags"]
-    @site["tagsLength"] = result["tagsLength"]
-    return Promise.all(@site["posts"].map((p) =>
-      return @processFile(p)
-    ))
-
-  processPages: () =>
-    return Promise.all(@site["pages"].map((p) =>
-      return @processFile(p)
-    ))
+  loadContext: (file) =>
+    lang = @loadLanguage(file)
+    return Object.assign(new File(), file, {
+      "site": @site,
+      "siteConfig": @site["siteConfig"],
+      "themeConfig": @site["themeConfig"],
+      "moment": moment,
+      "getVersion": getVersion,
+      "getURL": @getURL,
+      "getPath": @getPath,
+      "isCurrentPath": isCurrentPathFn(
+        @site["siteConfig"]["rootDir"], file["docPath"]
+      ),
+      "__": @translator.getTranslateFn(lang)
+    })
 
   buildServerRoutes: (allFiles) =>
     @_ = {}
@@ -204,8 +177,7 @@ class Router
           @site.del(key, file)
       else
         file = await @loadFile(file)
-    @site["posts"] = await @processPosts()
-    @site["pages"] = await @processPages()
+    @site = await @processor.process(@site)
     @site["files"] = await @generator.generate(@site)
     allFiles = @site["assets"].concat(@site["posts"])
     .concat(@site["pages"]).concat(@site["files"])
@@ -250,10 +222,11 @@ class Router
           "Content-Type": getContentType(res["docPath"])
         })
       if res["layout"]?
-        if res["layout"] not of @site["templates"]
-          res["layout"] = "page"
+        layout = res["layout"]
+        if layout not of @site["templates"]
+          layout = "page"
         response.write(
-          await @site["templates"][res["layout"]](res)
+          await @site["templates"][layout](@loadContext(res))
         )
       else
         response.write(res["content"])
@@ -298,8 +271,7 @@ class Router
       )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @site["posts"] = await @processPosts()
-    @site["pages"] = await @processPages()
+    @site = await @processor.process(@site)
     @site["files"] = await @generator.generate(@site)
     allFiles = @site["assets"].concat(@site["posts"])
     .concat(@site["pages"]).concat(@site["files"])
@@ -328,11 +300,8 @@ class Router
       )
     ))
     await Promise.all(allFiles.map(@loadFile))
-    @site["posts"] = await @processPosts()
-    @site["pages"] = await @processPages()
+    @site = await @processor.process(@site)
     @site["files"] = await @generator.generate(@site)
-    allFiles = @site["assets"].concat(@site["posts"])
-    .concat(@site["pages"]).concat(@site["files"])
     allFiles = @site["assets"].concat(@site["posts"])
     .concat(@site["pages"]).concat(@site["files"])
     @buildServerRoutes(allFiles)
