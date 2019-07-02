@@ -94,36 +94,7 @@ class Hikaru
           JSON.stringify(json, null, "  ")
         )
       )
-      fse.mkdirp(path.join(workDir, "srcs")).then(() =>
-        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "srcs", "index.md"
-        ))}`...")
-        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "srcs", "archives", "index.md"
-        ))}`...")
-        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "srcs", "categories", "index.md"
-        ))}`...")
-        @logger.debug("Hikaru is copying `#{colors.cyan(path.join(
-          workDir, "srcs", "tags", "index.md"
-        ))}`...")
-        fse.copy(
-          path.join(__dirname, "..", "dist", "index.md"),
-          path.join(workDir, "srcs", "index.md")
-        )
-        fse.copy(
-          path.join(__dirname, "..", "dist", "archives.md"),
-          path.join(workDir, "srcs", "archives", "index.md")
-        )
-        fse.copy(
-          path.join(__dirname, "..", "dist", "categories.md"),
-          path.join(workDir, "srcs", "categories", "index.md")
-        )
-        fse.copy(
-          path.join(__dirname, "..", "dist", "tags.md"),
-          path.join(workDir, "srcs", "tags", "index.md")
-        )
-      )
+      fse.mkdirp(path.join(workDir, "srcs"))
       fse.mkdirp(path.join(workDir, "docs"))
       fse.mkdirp(path.join(workDir, "themes"))
       fse.mkdirp(path.join(workDir, "scripts"))
@@ -143,7 +114,7 @@ class Hikaru
     if not siteConfig?["docDir"]?
       return
     matchFiles("*", {
-      "cwd": path.join(workDir, siteConfig["docDir"])
+      "cwd": path.join(workDir, siteConfig["docDir"]), "dot": true
     }).then((res) =>
       return res.map((r) =>
         fse.stat(path.join(workDir, siteConfig["docDir"], r)).then((stats) =>

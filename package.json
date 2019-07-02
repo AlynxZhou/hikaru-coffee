@@ -24,7 +24,7 @@
     "url": "https://github.com/AlynxZhou/hikaru/issues"
   },
   "homepage": "https://github.com/AlynxZhou/hikaru#readme",
-  "author": "AlynxZhou <alynx.zhou@gmail.com> (https://alynx.xyz/)",
+  "author": "Alynx Zhou <alynx.zhou@gmail.com> (https://alynx.xyz/)",
   "license": "Apache-2.0",
   "dependencies": {
     "bluebird": "^3.5.2",
