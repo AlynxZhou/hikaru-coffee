@@ -15,7 +15,7 @@ class Processor
 
   process: (site) =>
     for {name, fn} in @_
-      @logger.debug("Hikaru is processing #{colors.blue(name)}...")
+      @logger.debug("Hikaru is processing `#{colors.blue(name)}`...")
       site = await fn(site)
     return site
 
