@@ -395,7 +395,7 @@ class Hikaru
           p["excerpt"] = split[0]
           p["more"] = split[1]
           p["content"] = split.join("<a id=\"more\"></a>")
-        return site
+      return site
     )
 
   registerInternalGenerators: () =>
