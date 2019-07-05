@@ -237,6 +237,13 @@ genTags = (posts) ->
   )
   return {"tags": tags, "tagsLength": tagsLength}
 
+getFileLayout = (file, available) ->
+  if not file["layout"]?
+    return null
+  if file["layout"] not in available
+    return "page"
+  return file["layout"]
+
 resolveHeaderIds = ($) ->
   hNames = ["h1", "h2", "h3", "h4", "h5", "h6"]
   headings = $(hNames.join(", "))
@@ -314,7 +321,28 @@ resolveImage = ($, rootDir, docPath) ->
 getVersion = () ->
   return packageJSON["version"]
 
+default404 = """
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="viewport" content="
+        width=device-width,
+        initial-scale=1,
+        maximum-scale=1
+      ">
+      <title>404 Not Found</title>
+    </head>
+    <body>
+      <h1>404 Not Found</h1>
+      <p>Hikaru v#{getVersion()}</p>
+    </body>
+  </html>
+"""
+
 module.exports = {
+  "default404": default404,
   "escapeHTML": escapeHTML,
   "matchFiles": matchFiles,
   "removeControlChars": removeControlChars,
@@ -327,6 +355,7 @@ module.exports = {
   "getURLFn": getURLFn,
   "genCategories": genCategories,
   "genTags": genTags,
+  "getFileLayout": getFileLayout,
   "isCurrentPathFn": isCurrentPathFn,
   "resolveHeaderIds": resolveHeaderIds,
   "resolveLink": resolveLink,

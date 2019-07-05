@@ -6,15 +6,16 @@ http = require("http")
 colors = require("colors/safe")
 moment = require("moment-timezone")
 chokidar = require("chokidar")
-packageJSON = require("../package.json")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 {
+  default404,
   matchFiles,
   getVersion,
   getPathFn,
   getURLFn,
   getContentType,
+  getFileLayout,
   isCurrentPathFn,
   parseFrontMatter
 } = require("./utils")
@@ -86,10 +87,8 @@ class Router
     @logger.debug("Hikaru is writing `#{colors.cyan(
       path.join(file["docDir"], file["docPath"])
     )}`...")
-    if file["layout"]?
-      layout = file["layout"]
-      if layout not of @site["templates"]
-        layout = "page"
+    layout = getFileLayout(file, Object.keys(@site["templates"]))
+    if layout?
       @write(await @site["templates"][layout](@loadContext(file)), file)
     else
       @write(file["content"], file)
@@ -124,6 +123,29 @@ class Router
       ),
       "__": @translator.getTranslateFn(lang)
     })
+
+  matchAll: () =>
+    return (await matchFiles(path.join("**", "*"), {
+      "nodir": true,
+      "dot": true,
+      "cwd": @site["siteConfig"]["themeSrcDir"]
+    })).map((srcPath) =>
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["themeSrcDir"],
+        srcPath
+      )
+    ).concat((await matchFiles(path.join("**", "*"), {
+      "nodir": true,
+      "dot": true,
+      "cwd": @site["siteConfig"]["srcDir"]
+    })).map((srcPath) =>
+      return new File(
+        @site["siteConfig"]["docDir"],
+        @site["siteConfig"]["srcDir"],
+        srcPath
+      )
+    ))
 
   buildServerRoutes: (allFiles) =>
     @_ = {}
@@ -177,41 +199,21 @@ class Router
           @site.del(key, file)
       else
         file = await @loadFile(file)
-    @site = await @processor.process(@site)
-    @site["files"] = await @generator.generate(@site)
-    allFiles = @site["assets"].concat(@site["posts"])
-    .concat(@site["pages"]).concat(@site["files"])
-    @buildServerRoutes(allFiles)
+    await @handle()
+    @buildServerRoutes(
+      @site["assets"].concat(@site["posts"])
+      .concat(@site["pages"]).concat(@site["files"])
+    )
     @handling = false
 
   listen: (ip, port) =>
     server = http.createServer((request, response) =>
       if request["url"] not of @_
         @logger.log("404: #{request["url"]}")
-        res = @_[@getPath("404.html")]
-        if not res?
-          res = {
-            "content": """
-              <!DOCTYPE html>
-              <html>
-                <head>
-                  <meta charset="utf-8">
-                  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                  <meta name="viewport" content="
-                    width=device-width,
-                    initial-scale=1,
-                    maximum-scale=1
-                  ">
-                  <title>404 Not Found</title>
-                </head>
-                <body>
-                  <h1>404 Not Found</h1>
-                  <p>Hikaru v#{packageJSON["version"]}</p>
-                </body>
-              </html>
-            """,
-            "docPath": @getPath("404.html")
-          }
+        res = @_[@getPath("404.html")] or {
+          "content": default404,
+          "docPath": @getPath("404.html")
+        }
         response.writeHead(404, {
           "Content-Type": getContentType(res["docPath"])
         })
@@ -221,10 +223,8 @@ class Router
         response.writeHead(200, {
           "Content-Type": getContentType(res["docPath"])
         })
-      if res["layout"]?
-        layout = res["layout"]
-        if layout not of @site["templates"]
-          layout = "page"
+      layout = getFileLayout(res, Object.keys(@site["templates"]))
+      if layout?
         response.write(
           await @site["templates"][layout](@loadContext(res))
         )
@@ -248,63 +248,24 @@ class Router
       server.listen(port)
     @watchAll()
 
-  build: () =>
-    allFiles = (await matchFiles(path.join("**", "*"), {
-      "nodir": true,
-      "dot": true,
-      "cwd": @site["siteConfig"]["themeSrcDir"]
-    })).map((srcPath) =>
-      return new File(
-        @site["siteConfig"]["docDir"],
-        @site["siteConfig"]["themeSrcDir"],
-        srcPath
-      )
-    ).concat((await matchFiles(path.join("**", "*"), {
-      "nodir": true,
-      "dot": true,
-      "cwd": @site["siteConfig"]["srcDir"]
-    })).map((srcPath) =>
-      return new File(
-        @site["siteConfig"]["docDir"],
-        @site["siteConfig"]["srcDir"],
-        srcPath
-      )
-    ))
-    await Promise.all(allFiles.map(@loadFile))
+  handle: () =>
     @site = await @processor.process(@site)
     @site["files"] = await @generator.generate(@site)
-    allFiles = @site["assets"].concat(@site["posts"])
+
+  build: () =>
+    await Promise.all((await @matchAll()).map(@loadFile))
+    await @handle()
+    @site["assets"].concat(@site["posts"])
     .concat(@site["pages"]).concat(@site["files"])
-    allFiles.map(@saveFile)
+    .map(@saveFile)
 
   serve: (ip, port) =>
-    allFiles = (await matchFiles(path.join("**", "*"), {
-      "nodir": true,
-      "dot": true,
-      "cwd": @site["siteConfig"]["themeSrcDir"]
-    })).map((srcPath) =>
-      return new File(
-        @site["siteConfig"]["docDir"],
-        @site["siteConfig"]["themeSrcDir"],
-        srcPath
-      )
-    ).concat((await matchFiles(path.join("**", "*"), {
-      "nodir": true,
-      "dot": true,
-      "cwd": @site["siteConfig"]["srcDir"]
-    })).map((srcPath) =>
-      return new File(
-        @site["siteConfig"]["docDir"],
-        @site["siteConfig"]["srcDir"],
-        srcPath
-      )
-    ))
-    await Promise.all(allFiles.map(@loadFile))
-    @site = await @processor.process(@site)
-    @site["files"] = await @generator.generate(@site)
-    allFiles = @site["assets"].concat(@site["posts"])
-    .concat(@site["pages"]).concat(@site["files"])
-    @buildServerRoutes(allFiles)
+    await Promise.all((await @matchAll()).map(@loadFile))
+    await @handle()
+    @buildServerRoutes(
+      @site["assets"].concat(@site["posts"])
+      .concat(@site["pages"]).concat(@site["files"])
+    )
     @listen(ip, port)
 
 module.exports = Router
