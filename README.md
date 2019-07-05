@@ -96,11 +96,11 @@ $ hikaru b
 
 # More
 
-Docs: [Here](docs/en/index.md)
+Docs: [Here](docs/en/index.md)(Needs to update)
 
 Default theme ARIA: [hikaru-theme-aria](https://github.com/AlynxZhou/hikaru-theme-aria/)
 
-My blog built with Hikaru and ARIA: [喵's StackHarbor](https://sh.alynx.xyz/)
+My blog built with Hikaru and ARIA: [喵's StackHarbor](https://sh.alynx.moe/)
 
 # License
 
