@@ -237,7 +237,7 @@ class Hikaru
     return Object.keys(modules).filter((name) ->
       return /^hikaru-/.test(name)
     ).map((name) =>
-      @logger.debug("Hikaru is loading plugin `#{colors.cyan(name)}`...")
+      @logger.debug("Hikaru is loading plugin `#{colors.blue(name)}`...")
       return require(require.resolve(name, {
         "paths": [@site["workDir"], ".", __dirname]
       }))(this)
