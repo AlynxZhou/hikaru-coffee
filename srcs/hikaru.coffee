@@ -81,7 +81,7 @@ class Hikaru
       )}`...")
       fse.copy(
         path.join(__dirname, "..", "dist", "config.yml"),
-        configPath or path.join(workDir, "config.yml")
+        configPath or path.join(workDir, "site.config.yml")
       )
       fse.readFile(
         path.join(__dirname, "..", "dist", "package.json")
@@ -104,7 +104,9 @@ class Hikaru
     )
 
   clean: (workDir = ".", configPath) =>
-    configPath = configPath or path.join(workDir, "config.yml")
+    configPath = configPath or path.join(workDir, "site.config.yml")
+    if not fse.existsSync(configPath)
+      configPath = path.join(workDir, "config.yml")
     try
       siteConfig = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     catch err
@@ -168,7 +170,9 @@ class Hikaru
 
   loadSite: (workDir, configPath) =>
     @site = new Site(workDir)
-    configPath = configPath or path.join(@site["workDir"], "config.yml")
+    configPath = configPath or path.join(@site["workDir"], "site.config.yml")
+    if not fse.existsSync(configPath)
+      configPath = path.join(@site["workDir"], "config.yml")
     try
       @site["siteConfig"] = yaml.safeLoad(fse.readFileSync(configPath, "utf8"))
     catch err
@@ -190,11 +194,14 @@ class Hikaru
     @site["siteConfig"]["categoryDir"] = @site["siteConfig"]["categoryDir"] or
     "categories"
     @site["siteConfig"]["tagDir"] = @site["siteConfig"]["tagDir"] or "tags"
+    themeConfigPath = path.join(@site["workDir"], "theme.config.yml")
+    if not fse.existsSync(themeConfigPath)
+      themeConfigPath = path.join(
+        @site["siteConfig"]["themeDir"], "config.yml"
+      )
     try
       @site["themeConfig"] = yaml.safeLoad(
-        fse.readFileSync(
-          path.join(@site["siteConfig"]["themeDir"], "config.yml"), "utf8"
-        )
+        fse.readFileSync(themeConfigPath, "utf8")
       )
     catch err
       if err["code"] is "ENOENT"
