@@ -18,6 +18,7 @@ Install Hikaru
     - [Utils](../dev/utils.md)
     - [Extend](../dev/extend.md)
     - [Theme](../dev/theme.md)
+
 # Dependences
 
 ## Node.js
@@ -39,3 +40,4 @@ If you have installed dependences, you can install Hikaru with NPM:
 Hikaru is a command line program and it provides a binary called `hikaru`, so you need to install it globally as root.
 
 Next Page: [Init](init.md)
+

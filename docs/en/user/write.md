@@ -77,3 +77,4 @@ This usually is a page that theme will create a tag cloud of all tags.
 Prev Page: [Config](config.md)
 
 Next Page: [Command](command.md)
+

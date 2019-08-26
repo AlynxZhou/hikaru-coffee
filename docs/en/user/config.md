@@ -18,6 +18,7 @@ Site Config
     - [Utils](../dev/utils.md)
     - [Extend](../dev/extend.md)
     - [Theme](../dev/theme.md)
+
 # Site info
 
 ## `title`
@@ -42,7 +43,7 @@ Your email.
 
 ## `language`
 
-Your site's language, options are depends on your theme. Hikaru does **NOT** support multi-lingual site. In fact only few people can write their site in different languages totally, most people do part of translation and makes their site a mess. It's more convenient to create two site with different languages, then you can arrange them by yourself. Multi-lingual site makes theme harder to write.
+Your site's language, please refer to your theme for available options list. Hikaru does **NOT** support multi-lingual site. In fact only few people can write their site in different languages totally, most people do part of translation and makes their site a mess. It's more convenient to create two site with different languages, then you can arrange them by yourself. Multi-lingual site makes theme harder to write.
 
 Hikaru contains **NO** timezone settings, it use your system timezone.
 
@@ -112,3 +113,4 @@ For different npm modules, you can set their options as their docs, and it will 
 Prev Page: [Install](install.md)
 
 Next Page: [Write](write.md)
+

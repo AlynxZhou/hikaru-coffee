@@ -18,6 +18,7 @@ Types
     - [Utils](../dev/utils.md)
     - [Extend](../dev/extend.md)
     - [Theme](../dev/theme.md)
+
 This page contains types that Hikaru uses. Most of them are just class for plain object.
 
 # `File`
@@ -248,3 +249,4 @@ In fact all `Site`'s properties are inside a inner object `Site::_` and their ge
 Prev Page: [Hikaru](hikaru.md)
 
 Next Page: [Utils](utils.md)
+

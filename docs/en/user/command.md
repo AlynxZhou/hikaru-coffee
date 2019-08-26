@@ -18,6 +18,7 @@ Command Options
     - [Utils](../dev/utils.md)
     - [Extend](../dev/extend.md)
     - [Theme](../dev/theme.md)
+
 Hikaru contains several sub commands.
 
 # `init`
@@ -32,11 +33,11 @@ $ hikaru init|i [options] [dir]
 
 ## Options
 
-| Options                | Description              |
-| :--------------------- | :----------------------- |
-| `-d`, `--debug`        | Print debug messages.    |
-| `-c`, `--config <yml>` | Alternative config path. |
-| `-h`, `--help`         | output usage information |
+| Options                | Description                   |
+| :--------------------- | :---------------------------- |
+| `-d`, `--debug`        | Print debug messages.         |
+| `-c`, `--config <yml>` | Alternative site config path. |
+| `-h`, `--help`         | output usage information      |
 
 # `clean`
 
@@ -50,11 +51,11 @@ $ hikaru clean|c [options] [dir]
 
 ## Options
 
-| Options                | Description              |
-| :--------------------- | :----------------------- |
-| `-d`, `--debug`        | Print debug messages.    |
-| `-c`, `--config <yml>` | Alternative config path. |
-| `-h`, `--help`         | output usage information |
+| Options                | Description                   |
+| :--------------------- | :---------------------------- |
+| `-d`, `--debug`        | Print debug messages.         |
+| `-c`, `--config <yml>` | Alternative site config path. |
+| `-h`, `--help`         | output usage information      |
 
 # `build`
 
@@ -68,11 +69,11 @@ $ hikaru build|b [options] [dir]
 
 ## Options
 
-| Options                | Description              |
-| :--------------------- | :----------------------- |
-| `-d`, `--debug`        | Print debug messages.    |
-| `-c`, `--config <yml>` | Alternative config path. |
-| `-h`, `--help`         | output usage information |
+| Options                | Description                   |
+| :--------------------- | :---------------------------- |
+| `-d`, `--debug`        | Print debug messages.         |
+| `-c`, `--config <yml>` | Alternative site config path. |
+| `-h`, `--help`         | output usage information      |
 
 # `serve`
 
@@ -86,14 +87,15 @@ $ hikaru serve|s [options] [dir]
 
 ## Options
 
-| Options                | Description                       |
-| :--------------------- | :-------------------------------- |
-| `-d`, `--debug`        | Print debug messages.             |
-| `-c`, `--config <yml>` | Alternative config path.          |
-| `-i`, `--ip <ip>`      | Alternative listening IP address. |
-| `-p`, `--port <port>`  | Alternative listening port.       |
-| `-h`, `--help`         | output usage information          |
+| Options                | Description                            |
+| :--------------------- | :------------------------------------- |
+| `-d`, `--debug`        | Print debug messages.                  |
+| `-c`, `--config <yml>` | Alternative site config path.          |
+| `-i`, `--ip <ip>`      | Alternative listening IP address.      |
+| `-p`, `--port <port>`  | Alternative listening port.            |
+| `-h`, `--help`         | output usage information               |
 
 Prev Page: [Write](write.md)
 
 Next Page: [Deploy](deploy.md)
+

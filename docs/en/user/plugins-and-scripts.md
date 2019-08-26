@@ -44,3 +44,4 @@ You are supposed to hint the plugin type with words like `renderer`, `generator`
 For more example, you can read the code of [hikaru-renderer-coffeescript](https://github.com/AlynxZhou/hikaru-renderer-coffeescript/), [hikaru-generator-feed](https://github.com/AlynxZhou/hikaru-generator-feed/).
 
 Prev Page: [Deploy](deploy.md)
+

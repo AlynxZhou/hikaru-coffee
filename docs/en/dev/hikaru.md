@@ -18,6 +18,7 @@ Hikaru
     - [Utils](../dev/utils.md)
     - [Extend](../dev/extend.md)
     - [Theme](../dev/theme.md)
+
 This page contains what can you find in Hikaru. When you are creating plugins, your plugin will get a Hikaru instance, you can use following in it.
 
 # `Hikaru::logger`
@@ -59,3 +60,4 @@ A `Generator` instance, you can register your generator function to it.
 Prev Page: [Lifecycle](lifecycle.md)
 
 Next Page: [Types](types.md)
+

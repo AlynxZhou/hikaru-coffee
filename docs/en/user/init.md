@@ -35,7 +35,8 @@ hikura-site/
     |- srcs/
     |- docs/
     |- themes/
-    |- config.yml
+    |- siteConfig.yml
+    |- package.json
 ```
 
 # Install plugins
@@ -64,10 +65,10 @@ Or if you want commit the whole site you can use submodule:
 $ git submodule add https://github.com/AlynxZhou/hikaru-theme-aria.git themes/aria
 ```
 
-## Edit config
+## Edit site config
 
 ```
-$ $EDITOR config.yml
+$ $EDITOR siteConfig.yml
 ```
 
 Set `themeDir` to `aria`
@@ -76,11 +77,11 @@ Set `themeDir` to `aria`
 themeDir: aria
 ```
 
-Don't forget to config your theme as its README file.
+**Don't forget to edit your theme config as its README file.**
 
 # File info
 
-## `config.yml`
+## `siteConfig.yml`
 
 This contains most site config.
 
@@ -96,8 +97,9 @@ Your source files will be built to this directory.
 
 This contains your site's themes.
 
-**Most of those dirs can be changed in `config.yml`.**
+**Most of those dirs can be changed in `siteConfig.yml`.**
 
 Prev Page: [Install](install.md)
 
 Next Page: [Config](config.md)
+

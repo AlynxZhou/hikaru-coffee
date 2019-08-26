@@ -54,7 +54,7 @@ You can write a shell script to do this every time.
 
 Don't forget to go to your GitHub Repo settings and choose `master branch` to host pages.
 
-# Commit whole site (Recommand if available)
+# Commit whole site (Recommanded if available)
 
 Some host, like [GitHub Pages](https://pages.github.com/), allows you to commit whole site and host files in `docs/` dir only, so you can just commit your whole site, and use git to control your sources, too.
 
@@ -104,3 +104,4 @@ Don't forget to go to your GitHub Repo settings and choose `master branch /docs 
 Prev Page: [Command](command.md)
 
 Next Page: [Plugins and Scripts](plugins-and-scripts.md)
+

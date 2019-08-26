@@ -27,10 +27,10 @@ Hikaru supports plugins and scripts, but not all part of Hikaru is designed for 
 
 ## `register(srcExt, docExt, fn)`
 
-- `srcExt`: `String` or `String[]`
+- `srcExt`: `String`
 - `docExt`: `String`
-- `fn`: `function (file, ctx)`
-- Return type: `undefined`
+- `fn`: `function (file)`
+- Return type: `Hikaru::types.File`
 
 `srcExt` and `docExt` are start with `.`. A file with `srcExt` extend name will be render and change to `docExt`. `Renderer` will call `fn` to render it, `file` is `Hikaru::types.File`. `fn` should return `Hikaru::types.File`.
 
@@ -40,11 +40,11 @@ Hikaru supports plugins and scripts, but not all part of Hikaru is designed for 
 
 ## `register(layout, fn)`
 
-- `layout`: `String`
-- `fn`: `function (p, posts, ctx)`
-- Return type: `undefined`
+- `name`: `String`
+- `fn`: `function (site)`
+- Return type: `Hikaru::types.Site`
 
-`layout` should be one of `index`, `archives`, `tags`, `tag`, `categories`, `category`, `about`, `page`, `post` or other valid layouts. `fn` should return `Hikaru::types.File` and assign ctx into it, if you want attach posts, please assign `posts` to `p["posts"]`.
+`name` should be a short description. `site` is just `Hikaru::types.Site`, `fn` should return it too.
 
 # `Generator`
 
@@ -52,12 +52,13 @@ Hikaru supports plugins and scripts, but not all part of Hikaru is designed for 
 
 ## `register(type, fn)`
 
-- `type`: `String`
+- `name`: `String`
 - `fn`: `function (site)`
-- Return type: `undefined`
+- Return type: `Hikaru::types.Site`
 
-`type` should be one of `beforeProcessing` and `afterProcessing`. Typically, if you want create some data, use `beforeProcessing`, if you want create some page, use `afterProcessing`. Because some data are not ready when `beforeProcessing` is running. `site` is just `Hikaru::types.Site`, `fn` should return it too.
+`name` should be a short description. `site` is just `Hikaru::types.Site`, `fn` should return it too.
 
 Prev Page: [Utils](utils.md)
 
 Next Page: [Theme](theme.md)
+

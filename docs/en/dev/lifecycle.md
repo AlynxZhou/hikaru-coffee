@@ -39,12 +39,11 @@ Making the site is done by a special module called `Router`, it is special becau
 
 And then `Router` will call first module `Renderer`, it contains registered functions, and will render file content by different extend names of file's srcPath, after rendering it replaces file extend name, and save it in file's docPath.
 
-Then `Router` call the second module `Generator`, because some info and data needed by some page are not from files but gathered by functions, so we run those functions registered with `beforeProcessing` tag, it get a reference of site and add some property to site for use, like categories and tags.
+Then `Router` call `Processor` to edit some page with cheerio or other libs.
 
-To make a post or a page complete, we still need to compile them with templates, not only content but other thing is need when compiling, so `Router` call `Processor` to do this. Variables and funtions will be copied to file objects and if you want to do something like changing content or pagination for some layouts, you can register a processor function.
-
-After processing `Router` will call `Generator` again with `afterProcessing`. Though Hikaru builds routes with directory structures, some output files don't have source files like sitemap files. So we create `File` objects manually in generator functions before saving.
+After processing `Router` will call `Generator`. Though Hikaru builds routes with directory structures, some output files don't have source files like sitemap files. So we create `File` objects manually in generator functions before saving.
 
 Finally if you called `Router::build`, `Router` will save them to doc directory with their `docPath`, posts and pages will be compiled with different templates, which is depend on their layout. And if you called `Router::serve`, `Router` will build an object with `docPath` and files, then start a http server, if you request a path, it will find it in the object and return a page, posts and pages will be compiled before return, too. Also it will watch file and reload them automatically.
 
 Next Page: [Hikaru](hikaru.md)
+

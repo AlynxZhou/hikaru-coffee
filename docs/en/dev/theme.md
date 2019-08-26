@@ -32,10 +32,10 @@ themename/
     |- scripts/
     |- srcs/
     |- languages/
-    |- config.yml
+    |- themeConfig.yml
 ```
 
-## `config.yml`
+## `themeConfig.yml`
 
 This is theme's config, you can access it with `site["themeConfig"]` in template.
 
@@ -109,9 +109,9 @@ Scripts are just JavaScript files that export a function, which receives a `Hika
 
 ```javascript
 module.exports = (hikaru) => {
-  hikaru.processor.register("post", (p, post, ctx) => {
-    p["content"] = "<p>I add this via processor!</p>" + p["content"]
-    return p
+  hikaru.processor.register("description", (site) => {
+    // Do something...
+    return site
   })
 }
 ```
@@ -119,3 +119,4 @@ module.exports = (hikaru) => {
 Plugins are the same but they work as npm packages.
 
 Prev Page: [Extend](extend.md)
+
