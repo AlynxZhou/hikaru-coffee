@@ -40,10 +40,10 @@ Or if you want commit the whole site you can use submodule:
 $ git submodule add https://github.com/AlynxZhou/hikaru-theme-aria.git themes/aria
 ```
 
-## Edit config
+## Edit site config
 
 ```
-$ $EDITOR config.yml
+$ $EDITOR siteConfig.yml
 ```
 
 Set `themeDir` to `aria`
@@ -52,7 +52,7 @@ Set `themeDir` to `aria`
 themeDir: aria
 ```
 
-Don't forget to config your theme as its README file.
+**Don't forget to edit your theme config as its README file.**
 
 # Create src file
 
@@ -105,3 +105,4 @@ My blog built with Hikaru and ARIA: [喵's StackHarbor](https://sh.alynx.moe/)
 # License
 
 [Apache-2.0](LICENSE)
+
