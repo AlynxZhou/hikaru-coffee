@@ -62,7 +62,7 @@ class Hikaru
   init: (workDir = ".", configPath) =>
     return fse.mkdirp(workDir).then(() =>
       @logger.debug("Hikaru is copying `#{colors.cyan(
-        configPath or path.join(workDir, "config.yml")
+        configPath or path.join(workDir, "siteConfig.yml")
       )}`...")
       @logger.debug("Hikaru is copying `#{colors.cyan(
         path.join(workDir, "package.json")
@@ -80,8 +80,8 @@ class Hikaru
         path.join(workDir, "scripts", path.sep)
       )}`...")
       fse.copy(
-        path.join(__dirname, "..", "dist", "config.yml"),
-        configPath or path.join(workDir, "site.config.yml")
+        path.join(__dirname, "..", "dist", "siteConfig.yml"),
+        configPath or path.join(workDir, "siteConfig.yml")
       )
       fse.readFile(
         path.join(__dirname, "..", "dist", "package.json")
@@ -104,7 +104,7 @@ class Hikaru
     )
 
   clean: (workDir = ".", configPath) =>
-    configPath = configPath or path.join(workDir, "site.config.yml")
+    configPath = configPath or path.join(workDir, "siteConfig.yml")
     if not fse.existsSync(configPath)
       configPath = path.join(workDir, "config.yml")
     try
@@ -170,7 +170,7 @@ class Hikaru
 
   loadSite: (workDir, configPath) =>
     @site = new Site(workDir)
-    configPath = configPath or path.join(@site["workDir"], "site.config.yml")
+    configPath = configPath or path.join(@site["workDir"], "siteConfig.yml")
     if not fse.existsSync(configPath)
       configPath = path.join(@site["workDir"], "config.yml")
     try
@@ -194,7 +194,7 @@ class Hikaru
     @site["siteConfig"]["categoryDir"] = @site["siteConfig"]["categoryDir"] or
     "categories"
     @site["siteConfig"]["tagDir"] = @site["siteConfig"]["tagDir"] or "tags"
-    themeConfigPath = path.join(@site["workDir"], "theme.config.yml")
+    themeConfigPath = path.join(@site["workDir"], "themeConfig.yml")
     if not fse.existsSync(themeConfigPath)
       themeConfigPath = path.join(
         @site["siteConfig"]["themeDir"], "config.yml"
