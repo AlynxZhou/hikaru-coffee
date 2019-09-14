@@ -294,6 +294,7 @@ resolveLink = ($, baseURL, rootDir, docPath) ->
       continue
     if new URL(href, baseURL).host isnt getURL(docPath).host
       $(a).attr("target", "_blank")
+      $(a).attr("rel", "noreferrer noopener")
     if href.startsWith("https://") or href.startsWith("http://") or
     href.startsWith("//") or href.startsWith("/") or
     href.startsWith("javascript:")
