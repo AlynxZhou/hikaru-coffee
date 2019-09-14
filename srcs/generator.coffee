@@ -17,6 +17,8 @@ class Generator
     for {name, fn} in @_
       @logger.debug("Hikaru is generating `#{colors.blue(name)}`...")
       res = await fn(site)
+      if not res?
+        continue
       if res not instanceof Array
         results.push(res)
       else

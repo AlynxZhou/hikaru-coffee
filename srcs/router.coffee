@@ -208,8 +208,10 @@ class Router
 
   listen: (ip, port) =>
     server = http.createServer((request, response) =>
-      if request["url"] not of @_
-        @logger.log("404: #{request["url"]}")
+      # Remove query string.
+      url = request["url"].split(/[?#]/)[0]
+      if url not of @_
+        @logger.log("404: #{url}")
         res = @_[@getPath("404.html")] or {
           "content": default404,
           "docPath": @getPath("404.html")
@@ -218,8 +220,8 @@ class Router
           "Content-Type": getContentType(res["docPath"])
         })
       else
-        @logger.log("200: #{request["url"]}")
-        res = @_[request["url"]]
+        @logger.log("200: #{url}")
+        res = @_[url]
         response.writeHead(200, {
           "Content-Type": getContentType(res["docPath"])
         })
