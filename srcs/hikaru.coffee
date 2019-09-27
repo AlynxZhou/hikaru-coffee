@@ -21,6 +21,10 @@ types = require("./types")
 {Site, File, Category, Tag} = types
 utils = require("./utils")
 {
+  isArray,
+  isString,
+  isFunction,
+  isObject,
   escapeHTML,
   matchFiles,
   removeControlChars,
@@ -407,7 +411,7 @@ class Hikaru
 
   registerInternalGenerators: () =>
     @generator.register("index pages", (site) ->
-      if site["siteConfig"]["perPage"] instanceof Object
+      if isObject(site["siteConfig"]["perPage"])
         perPage = site["siteConfig"]["perPage"]["index"] or 10
       else
         perPage = site["siteConfig"]["perPage"] or 10
@@ -422,7 +426,7 @@ class Hikaru
     )
 
     @generator.register("archives pages", (site) ->
-      if site["siteConfig"]["perPage"] instanceof Object
+      if isObject(site["siteConfig"]["perPage"])
         perPage = site["siteConfig"]["perPage"]["archives"] or 10
       else
         perPage = site["siteConfig"]["perPage"] or 10
@@ -438,7 +442,7 @@ class Hikaru
 
     @generator.register("categories pages", (site) ->
       results = []
-      if site["siteConfig"]["perPage"] instanceof Object
+      if isObject(site["siteConfig"]["perPage"])
         perPage = site["siteConfig"]["perPage"]["category"] or 10
       else
         perPage = site["siteConfig"]["perPage"] or 10
@@ -461,7 +465,7 @@ class Hikaru
 
     @generator.register("tags pages", (site) ->
       results = []
-      if site["siteConfig"]["perPage"] instanceof Object
+      if isObject(site["siteConfig"]["perPage"])
         perPage = site["siteConfig"]["perPage"]["tag"] or 10
       else
         perPage = site["siteConfig"]["perPage"] or 10

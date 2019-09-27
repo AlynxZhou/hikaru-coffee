@@ -49,8 +49,11 @@ highlight:
 
 search:
   enable: true
-  path: search.json
-  page: search.html
+  path:
+    - search/1.json
+    # - search/1.json
+    # - search/1.json
+  page: search/index.html
 
 feed:
   enable: true

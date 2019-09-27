@@ -10,6 +10,18 @@ highlight = require("./highlight")
 packageJSON = require("../package.json")
 extMIME = require("../dist/ext-mime.json")
 
+isString = (o) ->
+  return typeof(o) is "string"
+
+isArray = (o) ->
+  return Array.isArray(o)
+
+isFunction = (o) ->
+  return o instanceof Function
+
+isObject = (o) ->
+  return typeof(o) is "object" and o != null
+
 escapeHTML = (str) ->
   return str
   .replace(/&/g, "&amp;")
@@ -37,14 +49,14 @@ removeControlChars = (str) ->
 # https://github.com/nodeca/js-yaml/issues/91
 transposeYAMLTime = (datetime) ->
   # If you don't write full YYYY-MM-DD HH:mm:ss, js-yaml will leave a string.
-  if typeof(datetime) is "string"
+  if isString(datetime)
     return moment(datetime).format("YYYY-MM-DD HH:mm:ss")
   return moment(
     new Date(datetime.getTime() + datetime.getTimezoneOffset() * 60000)
   ).format("YYYY-MM-DD HH:mm:ss")
 
 parseFrontMatter = (file) ->
-  if typeof(file["raw"]) isnt "string"
+  if not isString(file["raw"])
     return file
   parsed = fm(file["raw"])
   file["text"] = parsed["body"]
@@ -83,7 +95,7 @@ getContentType = (docPath) ->
   return extMIME[path.extname(docPath)] or "application/octet-stream"
 
 paginate = (p, posts, perPage = 10) ->
-  if perPage instanceof Object
+  if isObject(perPage)
     ctx = perPage
     perPage = 10
   results = []
@@ -119,7 +131,7 @@ sortCategories = (category) ->
     sortCategories(sub)
 
 paginateCategories = (category, parentPath, perPage = 10, site) ->
-  if perPage instanceof Object
+  if isObject(perPage)
     site = perPage
     perPage = 10
   results = []
@@ -343,6 +355,10 @@ default404 = """
 """
 
 module.exports = {
+  "isString": isString,
+  "isArray": isArray,
+  "isFunction": isFunction,
+  "isObject": isObject,
   "default404": default404,
   "escapeHTML": escapeHTML,
   "matchFiles": matchFiles,

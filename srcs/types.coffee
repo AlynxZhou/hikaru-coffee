@@ -29,19 +29,11 @@ class Site
   wrap: () =>
     for key of @_ then do (key) =>
       Object.defineProperty(this, key, {
-        "get": () => return @get(key),
-        "set": (value) => @set(key, value)
+        "get": (() =>
+          return @_[key]),
+        "set": ((value) =>
+          @_[key] = value)
       })
-    
-  get: (key) =>
-    if typeof(key) isnt "string" or key not of @_
-      throw new TypeError("key must be a string in #{Object.keys(@_)}!")
-    return @_[key]
-
-  set: (key, value) =>
-    if typeof(key) isnt "string"
-      throw new TypeError("key must be a string!")
-    @_[key] = value
 
   # Put a file into an array.
   # If a file with the same docPath already in array, replace it.
@@ -99,7 +91,8 @@ class File
     @pageIndex = null
     @next = null
     @prev = null
-    if docDir instanceof Object
+    # Don't use utils here, or it will cause circular dependencies.
+    if typeof(docDir) is "object"
       Object.assign(this, docDir)
 
 class Category

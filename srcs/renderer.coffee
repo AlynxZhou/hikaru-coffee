@@ -2,6 +2,7 @@ path = require("path")
 colors = require("colors/safe")
 Promise = require("bluebird")
 {File} = require("./types")
+{isFunction} = require("./utils")
 
 class Renderer
   constructor: (logger, skipRenderList) ->
@@ -10,7 +11,7 @@ class Renderer
     @skipRenderList = skipRenderList or []
 
   register: (srcExt, docExt, fn) =>
-    if fn not instanceof Function
+    if not isFunction(fn)
       throw new TypeError("fn must be a Function!")
       return
     if srcExt not of @_

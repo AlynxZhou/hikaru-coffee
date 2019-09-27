@@ -1,6 +1,7 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
+{isFunction} = require("./utils")
 
 class Processor
   constructor: (logger) ->
@@ -8,7 +9,7 @@ class Processor
     @_ = []
 
   register: (name, fn) =>
-    if fn not instanceof Function
+    if not isFunction(fn)
       throw new TypeError("fn must be a Function!")
       return
     @_.push({"name": name, "fn": fn})

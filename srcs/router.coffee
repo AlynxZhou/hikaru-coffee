@@ -9,6 +9,10 @@ chokidar = require("chokidar")
 Promise = require("bluebird")
 {Site, File, Category, Tag} = require("./types")
 {
+  isArray,
+  isString,
+  isFunction,
+  isObject,
   default404,
   matchFiles,
   getVersion,
@@ -68,7 +72,7 @@ class Router
     file = parseFrontMatter(file)
     results = await Promise.all(@renderer.render(file))
     for result in results
-      if result["content"] instanceof Function
+      if isFunction(result["content"])
         result["type"] = "template"
         @site["templates"][path.basename(
           result["srcPath"], path.extname(result["srcPath"])
@@ -121,6 +125,10 @@ class Router
       "isCurrentPath": isCurrentPathFn(
         @site["siteConfig"]["rootDir"], file["docPath"]
       ),
+      "isArray": isArray,
+      "isString": isString,
+      "isFunction": isFunction,
+      "isObject": isObject,
       "__": @translator.getTranslateFn(lang)
     })
 

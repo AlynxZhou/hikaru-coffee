@@ -1,5 +1,6 @@
 {format} = require("util")
 Promise = require("bluebird")
+{isObject, isArray, isString} = require("./utils")
 
 class Translator
   constructor: (logger) ->
@@ -7,12 +8,12 @@ class Translator
     @_ = {}
 
   register: (lang, obj) =>
-    if obj not instanceof Object
+    if not isObject(obj)
       throw new TypeError(
         "obj must be a Object generated from yaml language file!"
       )
       return
-    if lang instanceof Array
+    if isArray(lang)
       for l in lang
         @_[l] = obj
       return
@@ -32,7 +33,7 @@ class Translator
         if k not of res
           return key
         res = res[k]
-      if typeof(res) is "string"
+      if isString(res)
         if args.length > 0
           return format(res, args...)
         else

@@ -1,5 +1,6 @@
 colors = require("colors/safe")
 Promise = require("bluebird")
+{isArray, isFunction} = require("./utils")
 
 class Generator
   constructor: (logger) ->
@@ -7,7 +8,7 @@ class Generator
     @_ = []
 
   register: (name, fn) =>
-    if fn not instanceof Function
+    if not isFunction(fn)
       throw new TypeError("fn must be a Function!")
       return
     @_.push({"name": name, "fn": fn})
@@ -19,7 +20,7 @@ class Generator
       res = await fn(site)
       if not res?
         continue
-      if res not instanceof Array
+      if not isArray(res)
         results.push(res)
       else
         results = results.concat(res)
