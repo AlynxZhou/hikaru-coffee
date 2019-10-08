@@ -11,7 +11,7 @@ escapeHTML = (str) ->
   .replace(/"/g, "&#039;")
 
 loadLangAliases = () ->
-  aliases = {"plain": "plain"}
+  aliases = {}
   for lang in hljs.listLanguages()
     aliases[lang] = lang
     lAliases = require("highlight.js/lib/languages/#{lang}")(hljs)["aliases"]
@@ -27,9 +27,9 @@ highlightAuto = (str) ->
         lang, require("highlight.js/lib/languages/#{lang}")
       )
   data = hljs.highlightAuto(str)
-  if data["relevance"] > 0 and data["language"]
+  if data["relevance"] > 0 and data["language"]?
     return data
-  return {"value": escapeHTML(str), "language": "plain"}
+  return {"value": escapeHTML(str)}
 
 highlight = (str, options = {}) ->
   if not aliases?
@@ -37,17 +37,30 @@ highlight = (str, options = {}) ->
   if options["hljs"]
     hljs.configure({"classPrefix": "hljs-"})
 
-  options["lang"] = aliases[options["lang"]]
+  # Guess when no lang was given,
   if not options["lang"]?
     data = highlightAuto(str)
+  # Skip auto guess when user sets lang to plain,
+  # plain is not in the alias list, so judge it first.
   else if options["lang"] is "plain"
-    data = {"value": escapeHTML(str), "language": "plain"}
+    data = {"value": escapeHTML(str)}
+  # Guess when this lang is given but not in highlightjs' alias list, too.
+  else if not aliases[options["lang"]]?
+    data = highlightAuto(str)
+  # We have correct lang alias, tell highlightjs to handle it.
+  # If given language does not match string content,
+  # highlightjs will set language to undefined.
   else
-    data = hljs.highlight(options["lang"], str)
+    data = hljs.highlight(aliases[options["lang"]], str)
 
-  results = [
-    "<figure class=\"highlight hljs #{data["language"].toLowerCase()}\">"
-  ]
+  # Language in <figure>'s class is highlight's detected result, not user input.
+  # To get user input, marked set it to parent <code>'s class.
+  results = ["<figure class=\"highlight hljs"]
+  if data["language"]?
+    results.push(" #{data["language"].toLowerCase()}\">")
+  else
+    results.push("\">")
+
   if options["gutter"]
     gutters = ["<pre class=\"gutter\">"]
     lines = data["value"].split("\n").length
