@@ -275,7 +275,7 @@ resolveHeaderIds = ($) ->
       headerIds[escaped] = 1
     $(h).attr("id", "#{id}")
     $(h).html(
-      "<a class=\"headerlink\" href=\"##{id}\" title=\"#{escaped}\">" +
+      "<a class=\"header-link\" href=\"##{id}\" title=\"#{escaped}\">" +
       "</a>" + "#{text}"
     )
 
