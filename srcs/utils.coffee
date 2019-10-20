@@ -95,9 +95,6 @@ getContentType = (docPath) ->
   return extMIME[path.extname(docPath)] or "application/octet-stream"
 
 paginate = (p, posts, perPage = 10) ->
-  if isObject(perPage)
-    ctx = perPage
-    perPage = 10
   results = []
   perPagePosts = []
   for post in posts
