@@ -44,7 +44,7 @@ highlight = (str, options = {}) ->
   # plain is not in the alias list, so judge it first.
   else if options["lang"] is "plain"
     data = {"value": escapeHTML(str)}
-  # Guess when this lang is given but not in highlightjs' alias list, too.
+  # Guess when lang is given but not in highlightjs' alias list, too.
   else if not aliases[options["lang"]]?
     data = highlightAuto(str)
   # We have correct lang alias, tell highlightjs to handle it.

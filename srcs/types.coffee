@@ -28,7 +28,7 @@ class Site
 
   wrap: () =>
     for key of @_ then do (key) =>
-      Object.defineProperty(this, key, {
+      Object.defineProperty(@, key, {
         "get": (() =>
           return @_[key]),
         "set": ((value) =>
@@ -93,7 +93,7 @@ class File
     @prev = null
     # Don't use utils here, or it will cause circular dependencies.
     if typeof(docDir) is "object"
-      Object.assign(this, docDir)
+      Object.assign(@, docDir)
 
 class Category
   constructor: (name, posts = [], subs = []) ->

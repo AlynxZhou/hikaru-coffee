@@ -13,6 +13,9 @@ extMIME = require("../dist/ext-mime.json")
 isString = (o) ->
   return typeof(o) is "string"
 
+isBuffer = (o) ->
+  return Buffer.isBuffer(o)
+
 isArray = (o) ->
   return Array.isArray(o)
 
@@ -127,10 +130,7 @@ sortCategories = (category) ->
   for sub in category["subs"]
     sortCategories(sub)
 
-paginateCategories = (category, parentPath, perPage = 10, site) ->
-  if isObject(perPage)
-    site = perPage
-    perPage = 10
+paginateCategories = (category, parentPath, site, perPage = 10) ->
   results = []
   sp = new File({
     "layout": "category",
@@ -147,7 +147,7 @@ paginateCategories = (category, parentPath, perPage = 10, site) ->
     results = results.concat(
       paginateCategories(sub, path.join(
         parentPath, "#{category["name"]}"
-      ), perPage, site)
+      ), site, perPage)
     )
   return results
 
@@ -353,6 +353,7 @@ default404 = """
 
 module.exports = {
   "isString": isString,
+  "isBuffer": isBuffer,
   "isArray": isArray,
   "isFunction": isFunction,
   "isObject": isObject,

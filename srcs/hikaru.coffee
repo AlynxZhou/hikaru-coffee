@@ -251,7 +251,7 @@ class Hikaru
       @logger.debug("Hikaru is loading plugin `#{colors.blue(name)}`...")
       return require(require.resolve(name, {
         "paths": [@site["workDir"], ".", __dirname]
-      }))(this)
+      }))(@)
     )
 
   # Load local scripts for site and theme.
@@ -273,7 +273,7 @@ class Hikaru
       }`...")
       return require(require.resolve(name, {
         "paths": [@site["workDir"], ".", __dirname]
-      }))(this)
+      }))(@)
     )
 
   registerInternalRenderers: () =>
@@ -449,7 +449,7 @@ class Hikaru
       for sub in site["categories"]
         sortCategories(sub)
         for p in paginateCategories(
-          sub, site["siteConfig"]["categoryDir"], perPage, site
+          sub, site["siteConfig"]["categoryDir"], site, perPage
         )
           results.push(p)
       results.push(new File({
