@@ -18,12 +18,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AlynxZhou/hikaru.git"
+    "url": "git+https://github.com/AlynxZhou/hikaru-coffee.git"
   },
   "bugs": {
-    "url": "https://github.com/AlynxZhou/hikaru/issues"
+    "url": "https://github.com/AlynxZhou/hikaru-coffee/issues"
   },
-  "homepage": "https://github.com/AlynxZhou/hikaru#readme",
+  "homepage": "https://github.com/AlynxZhou/hikaru-coffee#readme",
   "author": "Alynx Zhou <alynx.zhou@gmail.com> (https://alynx.moe/)",
   "license": "Apache-2.0",
   "dependencies": {
